@@ -143,6 +143,37 @@ export default function GuildPage() {
                 </div>
               </div>
 
+              {/* Gateway */}
+              <div className="mt-6">
+                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                  Gateway
+                </h3>
+                <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-1.5">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      selectedAgent.gateway === "localhost"
+                        ? "bg-[#22c55e]"
+                        : "bg-[#eab308]"
+                    }`}
+                  />
+                  <span className="font-mono text-xs text-[#a3a3a3]">
+                    {selectedAgent.gateway}
+                  </span>
+                </div>
+              </div>
+
+              {/* Model */}
+              <div className="mt-6">
+                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                  Model
+                </h3>
+                <div className="mt-2 inline-flex items-center rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-1.5">
+                  <span className="font-mono text-xs text-[#a3a3a3]">
+                    {selectedAgent.model}
+                  </span>
+                </div>
+              </div>
+
               {/* Last Activity */}
               <div className="mt-6">
                 <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">

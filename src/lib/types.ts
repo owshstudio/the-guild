@@ -8,11 +8,14 @@ export interface Agent {
   role: string;
   description: string;
   machine: string;
+  gateway: string;
+  model: string;
   currentTask: string | null;
   lastActivity: string;
   skills: string[];
   color: string;
   accentColor: string;
+  uptimeSince: string;
 }
 
 export interface ActivityEntry {
@@ -26,20 +29,27 @@ export interface ActivityEntry {
   type: "task" | "system" | "communication" | "error";
 }
 
+export type TaskStatus =
+  | "completed"
+  | "in-progress"
+  | "blocked"
+  | "pending"
+  | "upcoming"
+  | "recurring";
+
 export interface Task {
   id: string;
   title: string;
   description: string;
   agentId: string;
-  status: "backlog" | "in-progress" | "review" | "done";
+  status: TaskStatus;
   priority: "low" | "medium" | "high";
   createdAt: string;
   dueDate: string | null;
 }
 
-export interface UsageData {
+export interface AgentUsageDay {
   date: string;
-  tokensUsed: number;
-  apiCalls: number;
-  cost: number;
+  nyx: number;
+  hemera: number;
 }

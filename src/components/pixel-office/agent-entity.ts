@@ -34,7 +34,7 @@ export function createAgentEntities(): AgentEntity[] {
     {
       id: "hemera",
       name: "HEMERA",
-      status: "active",
+      status: "idle",
       sprite: hemeraSprite,
       x: agentPositions[1].seatPosition.x,
       y: agentPositions[1].seatPosition.y,

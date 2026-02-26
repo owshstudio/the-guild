@@ -42,6 +42,15 @@ body {
 .gradient-border {
   position: relative;
 }
+/* Gateway banner subtle pulse */
+@keyframes gateway-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.gateway-pulse {
+  animation: gateway-pulse 3s ease-in-out infinite;
+}
+
 .gradient-border::before {
   content: "";
   position: absolute;

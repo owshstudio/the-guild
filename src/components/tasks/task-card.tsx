@@ -1,56 +1,57 @@
 "use client";
 
-import { Task } from "@/lib/types";
-import { agents } from "@/lib/mock-data";
+import { Task, TaskStatus } from "@/lib/types";
 
 interface TaskCardProps {
   task: Task;
 }
 
+const statusConfig: Record<
+  TaskStatus,
+  { bg: string; text: string; label: string }
+> = {
+  completed: { bg: "#22c55e20", text: "#22c55e", label: "Completed" },
+  "in-progress": { bg: "#3b82f620", text: "#3b82f6", label: "In Progress" },
+  blocked: { bg: "#ef444420", text: "#ef4444", label: "Blocked" },
+  pending: { bg: "#eab30820", text: "#eab308", label: "Pending" },
+  upcoming: { bg: "#52525220", text: "#737373", label: "Upcoming" },
+  recurring: { bg: "#8b5cf620", text: "#8b5cf6", label: "Recurring" },
+};
+
 const priorityColors: Record<string, { bg: string; text: string }> = {
   high: { bg: "#ef444420", text: "#ef4444" },
   medium: { bg: "#eab30820", text: "#eab308" },
-  low: { bg: "#525252", text: "#737373" },
+  low: { bg: "#52525220", text: "#737373" },
 };
 
 export default function TaskCard({ task }: TaskCardProps) {
-  const agent = agents.find((a) => a.id === task.agentId);
+  const status = statusConfig[task.status];
   const priority = priorityColors[task.priority] || priorityColors.low;
 
-  const dueLabel = task.dueDate
-    ? new Date(task.dueDate).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : null;
-
   return (
-    <div className="rounded-lg border border-[#1f1f1f] bg-[#141414] p-3 transition hover:border-[#2a2a2a] hover:bg-[#1a1a1a]">
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="text-sm font-medium text-[#e5e5e5]">{task.title}</h4>
+    <div
+      className={`rounded-lg border border-[#1f1f1f] bg-[#141414] p-3 transition hover:border-[#2a2a2a] hover:bg-[#1a1a1a] ${
+        task.status === "completed" ? "opacity-60" : ""
+      }`}
+    >
+      <div className="mb-2 flex items-center gap-2">
         <span
-          className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
+          className="rounded px-1.5 py-0.5 text-[10px] font-medium"
+          style={{ backgroundColor: status.bg, color: status.text }}
+        >
+          {status.label}
+        </span>
+        <span
+          className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
           style={{ backgroundColor: priority.bg, color: priority.text }}
         >
           {task.priority}
         </span>
       </div>
-      <p className="mt-1.5 text-xs text-[#737373] line-clamp-2">
+      <h4 className="text-sm font-medium text-[#e5e5e5]">{task.title}</h4>
+      <p className="mt-1.5 line-clamp-2 text-xs text-[#737373]">
         {task.description}
       </p>
-      <div className="mt-3 flex items-center justify-between">
-        {agent && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs">{agent.emoji}</span>
-            <span className="text-[11px] text-[#525252]">{agent.name}</span>
-          </div>
-        )}
-        {dueLabel && (
-          <span className="text-[11px] text-[#525252]">{dueLabel}</span>
-        )}
-      </div>
     </div>
   );
 }

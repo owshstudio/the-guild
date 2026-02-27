@@ -73,14 +73,14 @@ export function drawAgent(
   // Shadow
   ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
   ctx.beginPath();
-  ctx.ellipse(agent.x + 8 * scale, agent.y + 22 * scale, 7 * scale, 2 * scale, 0, 0, Math.PI * 2);
+  ctx.ellipse(agent.x + 9 * scale, agent.y + 27 * scale, 8 * scale, 2.5 * scale, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // Draw character
   renderSprite(ctx, sprite, agent.x, agent.y, scale);
 
   // Name label
-  const nameX = agent.x + 8 * scale;
+  const nameX = agent.x + 9 * scale;
   const nameY = agent.y - 12;
   ctx.font = "bold 11px monospace";
   ctx.textAlign = "center";
@@ -118,8 +118,8 @@ export function isAgentHovered(
   mouseY: number,
   scale: number
 ): boolean {
-  const w = 16 * scale;
-  const h = 24 * scale;
+  const w = 18 * scale;
+  const h = 30 * scale;
   return (
     mouseX >= agent.x - 8 &&
     mouseX <= agent.x + w + 8 &&

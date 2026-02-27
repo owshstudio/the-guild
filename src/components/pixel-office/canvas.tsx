@@ -40,8 +40,8 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
     if (hoveredRef.current) {
       const agent = agentEntities.find((a) => a.id === hoveredRef.current);
       if (agent) {
-        const w = 18 * OFFICE.scale;
-        const h = 30 * OFFICE.scale;
+        const w = 16 * OFFICE.scale;
+        const h = 24 * OFFICE.scale;
         ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);

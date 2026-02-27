@@ -1,6 +1,7 @@
-// Character sprite system — template-based with palette swapping
-// Style reference: chibi RPG sprites with black outlines, 2-3 tone shading
-// ~18x30 sprites with 1:1.2 head:body ratio
+// Character sprite system — chibi RPG style
+// Reference: top-heavy mushroom silhouette, 1px black outline,
+// hair covers forehead, short legs, shoes extend forward
+// ~18 wide x 24 tall
 
 export type SpriteData = string[][];
 
@@ -8,18 +9,18 @@ export type SpriteData = string[][];
 const _ = "";   // transparent
 const X = "X";  // outline (black)
 const H = "H";  // hair base
-const Hd = "Hd"; // hair dark/shadow
-const Hl = "Hl"; // hair light/highlight
+const Hd = "Hd"; // hair dark
+const Hl = "Hl"; // hair highlight
 const K = "K";  // skin base
 const Kd = "Kd"; // skin shadow
 const S = "S";  // shirt base
 const Sd = "Sd"; // shirt shadow
-const Sl = "Sl"; // shirt highlight/accent
+const Sl = "Sl"; // shirt accent
 const P = "P";  // pants base
 const Pd = "Pd"; // pants shadow
-const O = "O";  // shoes base
+const O = "O";  // shoes
 const E = "E";  // eye white
-const Ep = "Ep"; // eye pupil (black)
+const Ep = "Ep"; // eye pupil
 
 export interface CharPalette {
   skin: string;
@@ -38,8 +39,6 @@ export interface CharPalette {
   eyePupil: string;
 }
 
-// ── PALETTES ──────────────────────────────────────────────
-
 export const PALETTES: Record<string, CharPalette> = {
   nyx: {
     skin: "#d8c0f0",
@@ -53,9 +52,9 @@ export const PALETTES: Record<string, CharPalette> = {
     hairDark: "#2e1065",
     hairLight: "#7c3aed",
     shoes: "#0f0a1a",
-    outline: "#1a1025",
+    outline: "#111111",
     eyeWhite: "#ffffff",
-    eyePupil: "#1a1025",
+    eyePupil: "#111111",
   },
   hemera: {
     skin: "#fce4b8",
@@ -69,13 +68,11 @@ export const PALETTES: Record<string, CharPalette> = {
     hairDark: "#d97706",
     hairLight: "#fcd34d",
     shoes: "#3a1a08",
-    outline: "#2a1a0a",
+    outline: "#111111",
     eyeWhite: "#ffffff",
-    eyePupil: "#2a1a0a",
+    eyePupil: "#111111",
   },
 };
-
-// ── RESOLVE TEMPLATE → PIXEL COLORS ─────────────────────
 
 function resolve(template: string[][], palette: CharPalette): SpriteData {
   return template.map((row) =>
@@ -104,196 +101,161 @@ function flipH(template: string[][]): string[][] {
   return template.map((row) => [...row].reverse());
 }
 
-// ── CHARACTER TEMPLATES (18 wide x 30 tall) ─────────────
-// Chibi proportions: big head (~13px), small body (~17px)
-// Full black outline around every form
-// 2-3 tone shading on hair, clothes, skin
+// ═══════════════════════════════════════════════════════════
+// TEMPLATES — 18 wide x 24 tall
+// Mushroom silhouette: big round head (hair covers forehead),
+// rectangular torso, short legs, shoes wider than legs
+// ═══════════════════════════════════════════════════════════
 
-// NYX: messy medium-length dark purple hair, falls to sides
-// HEMERA: long flowing golden hair past shoulders
-
-// Front-facing idle/standing
+// Front-facing standing
 const IDLE_DOWN: string[][] = [
-  // Row 0-1: top of hair
-  [_,_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,Hl,Hl,H,H,H,H,X,_,_,_,_,_],
-  [_,_,_,_,X,Hl,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,X,H,H,Hd,Hd,Hd,Hd,H,H,X,_,_,_,_],
-  // Row 5: forehead + hair sides
-  [_,_,_,X,H,H,X,K,K,K,K,X,H,H,X,_,_,_],
-  [_,_,_,X,H,X,K,K,K,K,K,K,X,H,X,_,_,_],
-  // Row 7: eyes
-  [_,_,_,X,H,X,K,E,Ep,K,E,Ep,X,H,X,_,_,_],
-  // Row 8: nose area
-  [_,_,_,X,H,X,K,K,K,K,K,K,X,H,X,_,_,_],
-  // Row 9: mouth
-  [_,_,_,_,X,X,K,K,Kd,Kd,K,K,X,X,_,_,_,_],
-  // Row 10: chin
-  [_,_,_,_,_,X,Kd,K,K,K,K,Kd,X,_,_,_,_,_],
-  // Row 11: neck
+  // -- Hair top (rows 0-3) --
+  [_,_,_,_,_,X,X,X,X,X,X,X,X,_,_,_,_,_],
+  [_,_,_,_,X,H,Hl,H,H,H,H,Hl,H,X,_,_,_,_],
+  [_,_,_,X,H,H,H,Hl,H,H,Hl,H,H,H,X,_,_,_],
+  [_,_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_,_],
+  // -- Hair sides + forehead covered (rows 4-5) --
+  [_,_,X,H,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,H,X,_,_],
+  [_,_,X,H,H,Hd,H,H,H,H,H,H,Hd,H,H,X,_,_],
+  // -- Face: eyes (row 6) — hair still on sides --
+  [_,_,X,H,Hd,K,K,E,Ep,K,K,Ep,E,K,Hd,H,X,_],
+  // -- Face: cheeks (rows 7-8) --
+  [_,_,X,H,Hd,K,K,K,K,K,K,K,K,K,Hd,H,X,_],
+  [_,_,_,X,H,Kd,K,K,K,K,K,K,K,Kd,H,X,_,_],
+  // -- Chin (row 9) --
+  [_,_,_,_,X,Hd,Kd,K,K,K,K,Kd,Hd,X,_,_,_,_],
+  // -- Neck (row 10) --
   [_,_,_,_,_,_,X,K,K,K,K,X,_,_,_,_,_,_],
-  // Row 12: shoulders
-  [_,_,_,_,_,X,X,S,S,S,S,X,X,_,_,_,_,_],
-  [_,_,_,_,X,S,S,S,Sl,Sl,S,S,S,X,_,_,_,_],
-  // Row 14: torso
-  [_,_,_,X,K,X,S,S,S,S,S,S,X,K,X,_,_,_],
+  // -- Shoulders + shirt (rows 11-12) --
+  [_,_,_,_,_,X,S,S,Sl,Sl,S,S,X,_,_,_,_,_],
+  [_,_,_,_,X,S,S,S,S,S,S,S,S,X,_,_,_,_],
+  // -- Torso + arms (rows 13-14): arms protrude, skin below sleeves --
   [_,_,_,X,K,X,S,S,Sd,Sd,S,S,X,K,X,_,_,_],
-  // Row 16: lower torso / hands
   [_,_,_,X,K,X,S,Sd,Sd,Sd,Sd,S,X,K,X,_,_,_],
-  [_,_,_,_,X,X,S,Sd,Sd,Sd,Sd,S,X,X,_,_,_,_],
-  // Row 18: belt area
-  [_,_,_,_,_,X,P,P,P,P,P,P,X,_,_,_,_,_],
-  // Row 19-22: legs
+  // -- Waist (row 15) --
+  [_,_,_,_,X,X,Sd,Sd,Sd,Sd,Sd,Sd,X,X,_,_,_,_],
+  // -- Pants (rows 16-18): short, separated by gap --
   [_,_,_,_,_,X,P,P,P,P,P,P,X,_,_,_,_,_],
   [_,_,_,_,_,X,P,P,X,X,P,P,X,_,_,_,_,_],
-  [_,_,_,_,_,X,P,Pd,X,X,Pd,P,X,_,_,_,_],
-  [_,_,_,_,_,X,P,Pd,X,X,Pd,P,X,_,_,_,_],
-  [_,_,_,_,_,X,P,Pd,X,X,Pd,P,X,_,_,_,_],
-  // Row 24-25: shoes
-  [_,_,_,_,_,X,O,O,X,X,O,O,X,_,_,_,_,_],
+  [_,_,_,_,_,X,P,Pd,X,X,Pd,P,X,_,_,_,_,_],
+  // -- Shoes (rows 19-20): wider than legs, extend forward --
   [_,_,_,_,X,O,O,O,X,X,O,O,O,X,_,_,_,_],
   [_,_,_,_,X,X,X,X,_,_,X,X,X,X,_,_,_,_],
-  // Row 27-29: padding
+  // -- Padding --
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
-// Walk step left (front-facing)
+// Walk step left
 const WALK_DOWN_L: string[][] = [
-  [_,_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,Hl,Hl,H,H,H,H,X,_,_,_,_,_],
-  [_,_,_,_,X,Hl,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,X,H,H,Hd,Hd,Hd,Hd,H,H,X,_,_,_,_],
-  [_,_,_,X,H,H,X,K,K,K,K,X,H,H,X,_,_,_],
-  [_,_,_,X,H,X,K,K,K,K,K,K,X,H,X,_,_,_],
-  [_,_,_,X,H,X,K,E,Ep,K,E,Ep,X,H,X,_,_,_],
-  [_,_,_,X,H,X,K,K,K,K,K,K,X,H,X,_,_,_],
-  [_,_,_,_,X,X,K,K,Kd,Kd,K,K,X,X,_,_,_,_],
-  [_,_,_,_,_,X,Kd,K,K,K,K,Kd,X,_,_,_,_,_],
+  [_,_,_,_,_,X,X,X,X,X,X,X,X,_,_,_,_,_],
+  [_,_,_,_,X,H,Hl,H,H,H,H,Hl,H,X,_,_,_,_],
+  [_,_,_,X,H,H,H,Hl,H,H,Hl,H,H,H,X,_,_,_],
+  [_,_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_,_],
+  [_,_,X,H,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,H,X,_,_],
+  [_,_,X,H,H,Hd,H,H,H,H,H,H,Hd,H,H,X,_,_],
+  [_,_,X,H,Hd,K,K,E,Ep,K,K,Ep,E,K,Hd,H,X,_],
+  [_,_,X,H,Hd,K,K,K,K,K,K,K,K,K,Hd,H,X,_],
+  [_,_,_,X,H,Kd,K,K,K,K,K,K,K,Kd,H,X,_,_],
+  [_,_,_,_,X,Hd,Kd,K,K,K,K,Kd,Hd,X,_,_,_,_],
   [_,_,_,_,_,_,X,K,K,K,K,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,X,S,S,S,S,X,X,_,_,_,_,_],
-  [_,_,_,_,X,S,S,S,Sl,Sl,S,S,S,X,_,_,_,_],
-  [_,_,_,X,K,X,S,S,S,S,S,S,X,K,X,_,_,_],
+  [_,_,_,_,_,X,S,S,Sl,Sl,S,S,X,_,_,_,_,_],
+  [_,_,_,_,X,S,S,S,S,S,S,S,S,X,_,_,_,_],
   [_,_,_,X,K,X,S,S,Sd,Sd,S,S,X,K,X,_,_,_],
   [_,_,_,X,K,X,S,Sd,Sd,Sd,Sd,S,X,K,X,_,_,_],
-  [_,_,_,_,X,X,S,Sd,Sd,Sd,Sd,S,X,X,_,_,_,_],
-  [_,_,_,_,_,X,P,P,P,P,P,P,X,_,_,_,_,_],
+  [_,_,_,_,X,X,Sd,Sd,Sd,Sd,Sd,Sd,X,X,_,_,_,_],
   [_,_,_,_,_,X,P,P,P,P,P,P,X,_,_,_,_,_],
   [_,_,_,_,X,P,P,X,_,_,X,P,P,X,_,_,_,_],
-  [_,_,_,_,X,P,Pd,X,_,_,X,Pd,P,X,_,_,_,_],
-  [_,_,_,X,P,Pd,X,_,_,_,_,X,Pd,P,X,_,_,_],
-  [_,_,_,X,O,O,X,_,_,_,_,X,O,O,X,_,_,_],
-  [_,_,X,O,O,O,X,_,_,_,_,_,X,O,X,_,_,_],
-  [_,_,X,X,X,X,_,_,_,_,_,_,X,X,X,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,X,P,Pd,X,_,_,_,X,Pd,P,X,_,_,_,_],
+  [_,_,X,O,O,O,X,_,_,_,_,X,O,O,X,_,_,_],
+  [_,_,X,X,X,X,_,_,_,_,_,X,X,X,X,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
-// Walk step right = mirror of left
 const WALK_DOWN_R: string[][] = WALK_DOWN_L.map(row => [...row].reverse());
 
-// Typing frame 1 — arms forward on desk
+// Typing frame 1 — shifted down 1px, arms reach forward
 const TYPE_1: string[][] = [
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,Hl,Hl,H,H,H,H,X,_,_,_,_,_],
-  [_,_,_,_,X,Hl,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,X,H,H,Hd,Hd,Hd,Hd,H,H,X,_,_,_,_],
-  [_,_,_,X,H,H,X,K,K,K,K,X,H,H,X,_,_,_],
-  [_,_,_,X,H,X,K,K,K,K,K,K,X,H,X,_,_,_],
-  [_,_,_,X,H,X,K,E,Ep,K,E,Ep,X,H,X,_,_,_],
-  [_,_,_,X,H,X,K,K,K,K,K,K,X,H,X,_,_,_],
-  [_,_,_,_,X,X,K,K,Kd,Kd,K,K,X,X,_,_,_,_],
-  [_,_,_,_,_,X,Kd,K,K,K,K,Kd,X,_,_,_,_,_],
+  [_,_,_,_,_,X,X,X,X,X,X,X,X,_,_,_,_,_],
+  [_,_,_,_,X,H,Hl,H,H,H,H,Hl,H,X,_,_,_,_],
+  [_,_,_,X,H,H,H,Hl,H,H,Hl,H,H,H,X,_,_,_],
+  [_,_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_,_],
+  [_,_,X,H,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,H,X,_,_],
+  [_,_,X,H,H,Hd,H,H,H,H,H,H,Hd,H,H,X,_,_],
+  [_,_,X,H,Hd,K,K,E,Ep,K,K,Ep,E,K,Hd,H,X,_],
+  [_,_,X,H,Hd,K,K,K,K,K,K,K,K,K,Hd,H,X,_],
+  [_,_,_,X,H,Kd,K,K,K,K,K,K,K,Kd,H,X,_,_],
+  [_,_,_,_,X,Hd,Kd,K,K,K,K,Kd,Hd,X,_,_,_,_],
   [_,_,_,_,_,_,X,K,K,K,K,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,X,S,S,S,S,X,X,_,_,_,_,_],
-  [_,_,_,_,X,S,S,S,Sl,Sl,S,S,S,X,_,_,_,_],
-  [_,_,_,X,S,S,S,S,S,S,S,S,S,S,X,_,_,_],
-  [_,_,X,K,X,S,S,Sd,Sd,Sd,Sd,S,S,X,K,X,_,_],
+  [_,_,_,_,_,X,S,S,Sl,Sl,S,S,X,_,_,_,_,_],
+  [_,_,_,_,X,S,S,S,S,S,S,S,S,X,_,_,_,_],
+  [_,_,X,K,X,S,S,S,Sd,Sd,S,S,S,X,K,X,_,_],
   [_,X,K,K,X,S,Sd,Sd,Sd,Sd,Sd,Sd,X,K,K,X,_],
-  [_,X,K,X,_,X,X,X,X,X,X,X,X,_,X,K,X,_],
-  [_,_,X,_,_,X,P,P,P,P,P,P,X,_,_,X,_,_],
+  [_,X,X,X,X,Sd,Sd,Sd,Sd,Sd,Sd,Sd,X,X,X,X,_],
   [_,_,_,_,_,X,P,P,P,P,P,P,X,_,_,_,_,_],
   [_,_,_,_,_,X,P,P,X,X,P,P,X,_,_,_,_,_],
   [_,_,_,_,_,X,P,Pd,X,X,Pd,P,X,_,_,_,_,_],
-  [_,_,_,_,_,X,P,Pd,X,X,Pd,P,X,_,_,_,_,_],
-  [_,_,_,_,_,X,O,O,X,X,O,O,X,_,_,_,_,_],
   [_,_,_,_,X,O,O,O,X,X,O,O,O,X,_,_,_,_],
   [_,_,_,_,X,X,X,X,_,_,X,X,X,X,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
-// Typing frame 2 — slight arm shift
+// Typing frame 2 — one arm slightly higher
 const TYPE_2: string[][] = [
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,Hl,Hl,H,H,H,H,X,_,_,_,_,_],
-  [_,_,_,_,X,Hl,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,X,H,H,Hd,Hd,Hd,Hd,H,H,X,_,_,_,_],
-  [_,_,_,X,H,H,X,K,K,K,K,X,H,H,X,_,_,_],
-  [_,_,_,X,H,X,K,K,K,K,K,K,X,H,X,_,_,_],
-  [_,_,_,X,H,X,K,E,Ep,K,E,Ep,X,H,X,_,_,_],
-  [_,_,_,X,H,X,K,K,K,K,K,K,X,H,X,_,_,_],
-  [_,_,_,_,X,X,K,K,Kd,Kd,K,K,X,X,_,_,_,_],
-  [_,_,_,_,_,X,Kd,K,K,K,K,Kd,X,_,_,_,_,_],
+  [_,_,_,_,_,X,X,X,X,X,X,X,X,_,_,_,_,_],
+  [_,_,_,_,X,H,Hl,H,H,H,H,Hl,H,X,_,_,_,_],
+  [_,_,_,X,H,H,H,Hl,H,H,Hl,H,H,H,X,_,_,_],
+  [_,_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_,_],
+  [_,_,X,H,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,H,X,_,_],
+  [_,_,X,H,H,Hd,H,H,H,H,H,H,Hd,H,H,X,_,_],
+  [_,_,X,H,Hd,K,K,E,Ep,K,K,Ep,E,K,Hd,H,X,_],
+  [_,_,X,H,Hd,K,K,K,K,K,K,K,K,K,Hd,H,X,_],
+  [_,_,_,X,H,Kd,K,K,K,K,K,K,K,Kd,H,X,_,_],
+  [_,_,_,_,X,Hd,Kd,K,K,K,K,Kd,Hd,X,_,_,_,_],
   [_,_,_,_,_,_,X,K,K,K,K,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,X,S,S,S,S,X,X,_,_,_,_,_],
-  [_,_,_,_,X,S,S,S,Sl,Sl,S,S,S,X,_,_,_,_],
-  [_,_,_,X,S,S,S,S,S,S,S,S,S,S,X,_,_,_],
-  [_,_,_,X,K,X,S,Sd,Sd,Sd,Sd,S,X,K,X,_,_,_],
-  [_,X,K,K,X,S,Sd,Sd,Sd,Sd,Sd,Sd,X,K,K,X,_],
-  [_,X,K,X,_,X,X,X,X,X,X,X,X,_,X,K,X,_],
-  [_,_,X,_,_,X,P,P,P,P,P,P,X,_,_,X,_,_],
+  [_,_,_,_,_,X,S,S,Sl,Sl,S,S,X,_,_,_,_,_],
+  [_,_,_,_,X,S,S,S,S,S,S,S,S,X,_,_,_,_],
+  [_,X,K,X,X,S,S,S,Sd,Sd,S,S,S,X,K,X,_,_],
+  [_,_,X,K,X,S,Sd,Sd,Sd,Sd,Sd,Sd,X,K,K,X,_],
+  [_,_,_,X,X,Sd,Sd,Sd,Sd,Sd,Sd,Sd,X,X,X,X,_],
   [_,_,_,_,_,X,P,P,P,P,P,P,X,_,_,_,_,_],
   [_,_,_,_,_,X,P,P,X,X,P,P,X,_,_,_,_,_],
   [_,_,_,_,_,X,P,Pd,X,X,Pd,P,X,_,_,_,_,_],
-  [_,_,_,_,_,X,P,Pd,X,X,Pd,P,X,_,_,_,_,_],
-  [_,_,_,_,_,X,O,O,X,X,O,O,X,_,_,_,_,_],
   [_,_,_,_,X,O,O,O,X,X,O,O,O,X,_,_,_,_],
   [_,_,_,_,X,X,X,X,_,_,X,X,X,X,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
 ];
 
 // Right-facing standing
 const WALK_RIGHT_STAND: string[][] = [
-  [_,_,_,_,_,_,_,X,X,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,H,Hl,H,H,H,X,_,_,_,_,_],
-  [_,_,_,_,_,X,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,_,X,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,_,X,Hd,Hd,Hd,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,_,X,K,K,K,K,K,H,H,X,_,_,_,_],
-  [_,_,_,_,_,X,K,K,K,E,Ep,X,H,X,_,_,_,_],
-  [_,_,_,_,_,X,K,K,K,K,K,X,H,X,_,_,_,_],
-  [_,_,_,_,_,_,X,K,Kd,K,K,X,X,_,_,_,_,_],
-  [_,_,_,_,_,_,_,X,K,K,X,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,X,S,S,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,S,S,S,Sl,S,S,X,_,_,_,_,_],
-  [_,_,_,_,_,X,S,S,S,S,S,S,X,_,_,_,_,_],
-  [_,_,_,_,X,K,X,S,Sd,Sd,S,X,K,X,_,_,_,_],
-  [_,_,_,_,_,X,X,S,Sd,Sd,S,X,X,_,_,_,_,_],
-  [_,_,_,_,_,_,X,Sd,Sd,Sd,Sd,X,_,_,_,_,_],
-  [_,_,_,_,_,_,X,P,P,P,P,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,P,P,P,P,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,P,X,P,P,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,P,X,X,Pd,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,P,X,X,Pd,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,O,X,X,O,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,O,O,X,X,O,O,X,_,_,_,_,_],
-  [_,_,_,_,_,X,X,X,_,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_,_],
+  [_,_,_,_,_,X,H,Hl,H,H,H,H,X,_,_,_,_,_],
+  [_,_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_,_],
+  [_,_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_,_],
+  [_,_,_,X,H,Hd,Hd,Hd,H,H,H,H,H,X,_,_,_,_],
+  [_,_,_,X,H,Hd,K,K,K,K,K,H,H,X,_,_,_,_],
+  [_,_,_,X,Hd,K,K,K,E,Ep,K,Hd,H,X,_,_,_,_],
+  [_,_,_,X,Hd,K,K,K,K,K,K,Hd,H,X,_,_,_,_],
+  [_,_,_,_,X,Kd,K,K,K,K,Kd,H,X,_,_,_,_,_],
+  [_,_,_,_,_,X,Kd,K,K,Kd,X,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,X,K,K,X,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,X,S,S,Sl,S,X,_,_,_,_,_,_,_],
+  [_,_,_,_,X,S,S,S,S,S,S,X,_,_,_,_,_,_],
+  [_,_,_,X,K,X,S,Sd,Sd,S,X,K,X,_,_,_,_,_],
+  [_,_,_,_,X,X,Sd,Sd,Sd,Sd,X,X,_,_,_,_,_],
+  [_,_,_,_,_,X,Sd,Sd,Sd,Sd,X,_,_,_,_,_,_],
+  [_,_,_,_,_,X,P,P,P,P,X,_,_,_,_,_,_,_],
+  [_,_,_,_,_,X,P,X,X,P,X,_,_,_,_,_,_,_],
+  [_,_,_,_,_,X,Pd,X,X,Pd,X,_,_,_,_,_,_],
+  [_,_,_,_,X,O,O,X,X,O,O,X,_,_,_,_,_,_],
+  [_,_,_,_,X,X,X,_,X,X,X,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
@@ -301,38 +263,31 @@ const WALK_RIGHT_STAND: string[][] = [
 
 // Right-facing walk step
 const WALK_RIGHT_STEP: string[][] = [
-  [_,_,_,_,_,_,_,X,X,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,H,Hl,H,H,H,X,_,_,_,_,_],
-  [_,_,_,_,_,X,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,_,X,H,H,H,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,_,X,Hd,Hd,Hd,H,H,H,H,X,_,_,_,_],
-  [_,_,_,_,_,X,K,K,K,K,K,H,H,X,_,_,_,_],
-  [_,_,_,_,_,X,K,K,K,E,Ep,X,H,X,_,_,_,_],
-  [_,_,_,_,_,X,K,K,K,K,K,X,H,X,_,_,_,_],
-  [_,_,_,_,_,_,X,K,Kd,K,K,X,X,_,_,_,_,_],
-  [_,_,_,_,_,_,_,X,K,K,X,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,X,S,S,X,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,S,S,S,Sl,S,S,X,_,_,_,_,_],
-  [_,_,_,_,_,X,S,S,S,S,S,S,X,_,_,_,_,_],
-  [_,_,_,_,X,K,X,S,Sd,Sd,S,X,K,X,_,_,_,_],
-  [_,_,_,_,_,X,X,S,Sd,Sd,S,X,X,_,_,_,_,_],
-  [_,_,_,_,_,_,X,Sd,Sd,Sd,Sd,X,_,_,_,_,_],
-  [_,_,_,_,_,_,X,P,P,P,P,X,_,_,_,_,_,_],
-  [_,_,_,_,_,_,X,P,P,P,P,X,_,_,_,_,_,_],
-  [_,_,_,_,_,X,P,P,X,X,P,P,X,_,_,_,_,_],
-  [_,_,_,_,X,P,Pd,X,_,X,Pd,P,X,_,_,_,_],
-  [_,_,_,_,X,O,O,X,_,_,X,O,O,X,_,_,_,_],
-  [_,_,_,X,O,O,X,_,_,_,_,X,O,X,_,_,_,_],
-  [_,_,_,X,X,X,_,_,_,_,_,X,X,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_,_],
+  [_,_,_,_,_,X,H,Hl,H,H,H,H,X,_,_,_,_,_],
+  [_,_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_,_],
+  [_,_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_,_],
+  [_,_,_,X,H,Hd,Hd,Hd,H,H,H,H,H,X,_,_,_,_],
+  [_,_,_,X,H,Hd,K,K,K,K,K,H,H,X,_,_,_,_],
+  [_,_,_,X,Hd,K,K,K,E,Ep,K,Hd,H,X,_,_,_,_],
+  [_,_,_,X,Hd,K,K,K,K,K,K,Hd,H,X,_,_,_,_],
+  [_,_,_,_,X,Kd,K,K,K,K,Kd,H,X,_,_,_,_,_],
+  [_,_,_,_,_,X,Kd,K,K,Kd,X,_,_,_,_,_,_,_],
+  [_,_,_,_,_,_,X,K,K,X,_,_,_,_,_,_,_,_],
+  [_,_,_,_,_,X,S,S,Sl,S,X,_,_,_,_,_,_,_],
+  [_,_,_,_,X,S,S,S,S,S,S,X,_,_,_,_,_,_],
+  [_,_,_,X,K,X,S,Sd,Sd,S,X,K,X,_,_,_,_,_],
+  [_,_,_,_,X,X,Sd,Sd,Sd,Sd,X,X,_,_,_,_,_],
+  [_,_,_,_,_,X,Sd,Sd,Sd,Sd,X,_,_,_,_,_,_],
+  [_,_,_,_,_,X,P,P,P,P,X,_,_,_,_,_,_,_],
+  [_,_,_,_,X,P,P,X,X,P,P,X,_,_,_,_,_,_],
+  [_,_,_,X,P,Pd,X,_,X,Pd,P,X,_,_,_,_,_],
+  [_,_,X,O,O,O,X,_,X,O,O,O,X,_,_,_,_,_],
+  [_,_,X,X,X,X,_,_,_,X,X,X,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
 ];
-
 
 // ── SPRITE SET BUILDER ──────────────────────────────────
 
@@ -354,11 +309,11 @@ export function getCharacterSprites(paletteId: string): CharacterSprites {
   if (!pal) throw new Error(`Unknown palette: ${paletteId}`);
 
   const r = (t: string[][]) => resolve(t, pal);
+  const stand = r(IDLE_DOWN);
 
-  const walkDownStand = r(IDLE_DOWN);
   const sprites: CharacterSprites = {
-    idle: r(IDLE_DOWN),
-    walkDown: [r(WALK_DOWN_L), walkDownStand, r(WALK_DOWN_R), walkDownStand],
+    idle: stand,
+    walkDown: [r(WALK_DOWN_L), stand, r(WALK_DOWN_R), stand],
     walkRight: [r(WALK_RIGHT_STEP), r(WALK_RIGHT_STAND), r(WALK_RIGHT_STEP), r(WALK_RIGHT_STAND)],
     walkLeft: [
       resolve(flipH(WALK_RIGHT_STEP), pal),

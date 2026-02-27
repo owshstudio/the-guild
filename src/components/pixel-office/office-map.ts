@@ -148,13 +148,15 @@ export function drawEnvironment(ctx: CanvasRenderingContext2D, time: number) {
     drawWindow(ctx, el.position, time);
   });
 
-  // === SERVER RACK ===
-  const server = officeElements.find(e => e.type === "server");
-  if (server) drawServerRack(ctx, server.position, time);
+  // === SERVER RACKS ===
+  officeElements.filter(e => e.type === "server").forEach(el => {
+    drawServerRack(ctx, el.position, time);
+  });
 
-  // === BOOKSHELF ===
-  const shelf = officeElements.find(e => e.type === "bookshelf");
-  if (shelf) drawBookshelf(ctx, shelf.position);
+  // === BOOKSHELVES ===
+  officeElements.filter(e => e.type === "bookshelf").forEach(el => {
+    drawBookshelf(ctx, el.position);
+  });
 
   // === COFFEE MACHINE ===
   const coffee = officeElements.find(e => e.type === "coffee");
@@ -181,6 +183,25 @@ export function drawEnvironment(ctx: CanvasRenderingContext2D, time: number) {
   // === DOOR ===
   const door = officeElements.find(e => e.type === "door");
   if (door) drawDoor(ctx, door.position);
+
+  // === WALL CLOCK ===
+  drawWallClock(ctx, { x: 780, y: 20 }, time);
+
+  // === WHITEBOARD ===
+  drawWhiteboard(ctx, { x: 100, y: 10 }, time);
+
+  // === CEILING LIGHTS ===
+  drawCeilingLights(ctx, time);
+
+  // === WALL POSTERS ===
+  drawPoster(ctx, { x: 760, y: 14 }, "SHIP IT", "#DF4F15");
+  drawPoster(ctx, { x: 850, y: 18 }, "ITERATE", "#A326B5");
+
+  // === COUCH / LOUNGE AREA ===
+  drawCouch(ctx, { x: 780, y: 320 });
+
+  // === WATER COOLER ===
+  drawWaterCooler(ctx, { x: 130, y: 420 }, time);
 }
 
 export function drawDesks(ctx: CanvasRenderingContext2D, time: number) {
@@ -574,6 +595,233 @@ function drawRug(ctx: CanvasRenderingContext2D, pos: Position) {
   ctx.fillRect(pos.x + rugW - 7, pos.y + 6, 1, rugH - 12);
 }
 
+function drawWallClock(ctx: CanvasRenderingContext2D, pos: Position, time: number) {
+  // Clock face
+  ctx.fillStyle = "#1a1a1a";
+  ctx.beginPath();
+  ctx.arc(pos.x + 14, pos.y + 14, 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#222222";
+  ctx.beginPath();
+  ctx.arc(pos.x + 14, pos.y + 14, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#0e0e0e";
+  ctx.beginPath();
+  ctx.arc(pos.x + 14, pos.y + 14, 12, 0, Math.PI * 2);
+  ctx.fill();
+  // Hour markers
+  for (let h = 0; h < 12; h++) {
+    const angle = (h / 12) * Math.PI * 2 - Math.PI / 2;
+    const mx = pos.x + 14 + Math.cos(angle) * 10;
+    const my = pos.y + 14 + Math.sin(angle) * 10;
+    ctx.fillStyle = "#444444";
+    ctx.fillRect(mx, my, 2, 2);
+  }
+  // Hour hand (slow)
+  const hourAngle = (time * 0.0002) % (Math.PI * 2) - Math.PI / 2;
+  ctx.strokeStyle = "#888888";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pos.x + 14, pos.y + 14);
+  ctx.lineTo(pos.x + 14 + Math.cos(hourAngle) * 6, pos.y + 14 + Math.sin(hourAngle) * 6);
+  ctx.stroke();
+  // Minute hand
+  const minAngle = (time * 0.002) % (Math.PI * 2) - Math.PI / 2;
+  ctx.strokeStyle = "#aaaaaa";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pos.x + 14, pos.y + 14);
+  ctx.lineTo(pos.x + 14 + Math.cos(minAngle) * 9, pos.y + 14 + Math.sin(minAngle) * 9);
+  ctx.stroke();
+  // Second hand (red, ticking)
+  const secAngle = (time * 0.02) % (Math.PI * 2) - Math.PI / 2;
+  ctx.strokeStyle = "#ef4444";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pos.x + 14, pos.y + 14);
+  ctx.lineTo(pos.x + 14 + Math.cos(secAngle) * 10, pos.y + 14 + Math.sin(secAngle) * 10);
+  ctx.stroke();
+  // Center dot
+  ctx.fillStyle = "#ef4444";
+  ctx.beginPath();
+  ctx.arc(pos.x + 14, pos.y + 14, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawWhiteboard(ctx: CanvasRenderingContext2D, pos: Position, _time: number) {
+  // Board
+  ctx.fillStyle = "#2a2a2a";
+  ctx.fillRect(pos.x, pos.y, 50, 36);
+  ctx.fillStyle = "#e8e8e8";
+  ctx.fillRect(pos.x + 3, pos.y + 3, 44, 30);
+  // Content — scribbles
+  ctx.strokeStyle = "#3b82f6";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pos.x + 8, pos.y + 10);
+  ctx.lineTo(pos.x + 30, pos.y + 10);
+  ctx.stroke();
+  ctx.strokeStyle = "#ef4444";
+  ctx.beginPath();
+  ctx.moveTo(pos.x + 8, pos.y + 16);
+  ctx.lineTo(pos.x + 24, pos.y + 16);
+  ctx.stroke();
+  ctx.strokeStyle = "#22c55e";
+  ctx.beginPath();
+  ctx.moveTo(pos.x + 8, pos.y + 22);
+  ctx.lineTo(pos.x + 36, pos.y + 22);
+  ctx.stroke();
+  // Checkbox
+  ctx.strokeStyle = "#7c3aed";
+  ctx.strokeRect(pos.x + 34, pos.y + 8, 6, 6);
+  ctx.strokeRect(pos.x + 34, pos.y + 18, 6, 6);
+  // Checkmark
+  ctx.strokeStyle = "#22c55e";
+  ctx.beginPath();
+  ctx.moveTo(pos.x + 35, pos.y + 11);
+  ctx.lineTo(pos.x + 37, pos.y + 13);
+  ctx.lineTo(pos.x + 39, pos.y + 9);
+  ctx.stroke();
+  // Marker tray
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fillRect(pos.x + 5, pos.y + 34, 40, 4);
+  // Colored markers
+  ctx.fillStyle = "#ef4444";
+  ctx.fillRect(pos.x + 8, pos.y + 34, 8, 3);
+  ctx.fillStyle = "#3b82f6";
+  ctx.fillRect(pos.x + 18, pos.y + 34, 8, 3);
+  ctx.fillStyle = "#22c55e";
+  ctx.fillRect(pos.x + 28, pos.y + 34, 8, 3);
+}
+
+function drawCeilingLights(ctx: CanvasRenderingContext2D, time: number) {
+  // Light fixtures hanging from ceiling — cast cones of light
+  const lights = [
+    { x: 200, y: 67 },
+    { x: 400, y: 67 },
+    { x: 600, y: 67 },
+    { x: 800, y: 67 },
+  ];
+  lights.forEach((l, i) => {
+    // Fixture
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(l.x - 6, l.y - 2, 12, 4);
+    ctx.fillStyle = "#222222";
+    ctx.fillRect(l.x - 4, l.y + 2, 8, 3);
+    // Light cone (subtle)
+    const flicker = 0.03 + Math.sin(time * 0.008 + i * 1.7) * 0.008;
+    const grad = ctx.createLinearGradient(l.x, l.y + 5, l.x, l.y + 120);
+    grad.addColorStop(0, `rgba(255, 240, 200, ${flicker * 2})`);
+    grad.addColorStop(1, `rgba(255, 240, 200, 0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(l.x - 4, l.y + 5);
+    ctx.lineTo(l.x - 40, l.y + 120);
+    ctx.lineTo(l.x + 40, l.y + 120);
+    ctx.lineTo(l.x + 4, l.y + 5);
+    ctx.closePath();
+    ctx.fill();
+    // Warm bulb dot
+    ctx.fillStyle = `rgba(255, 220, 150, ${0.3 + Math.sin(time * 0.01 + i) * 0.1})`;
+    ctx.beginPath();
+    ctx.arc(l.x, l.y + 4, 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawPoster(ctx: CanvasRenderingContext2D, pos: Position, text: string, color: string) {
+  // Frame
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fillRect(pos.x, pos.y, 36, 28);
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(pos.x + 2, pos.y + 2, 32, 24);
+  // Text
+  ctx.font = "bold 7px monospace";
+  ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.fillText(text, pos.x + 18, pos.y + 16);
+  ctx.textAlign = "left";
+  // Subtle glow
+  const rgb = hexToRgb(color);
+  ctx.fillStyle = `rgba(${rgb}, 0.06)`;
+  ctx.fillRect(pos.x - 4, pos.y - 2, 44, 34);
+}
+
+function drawCouch(ctx: CanvasRenderingContext2D, pos: Position) {
+  // Couch back
+  ctx.fillStyle = "#1a1018";
+  ctx.fillRect(pos.x, pos.y, 80, 16);
+  ctx.fillStyle = "#221828";
+  ctx.fillRect(pos.x + 2, pos.y + 2, 76, 12);
+  // Seat cushions
+  ctx.fillStyle = "#2a1e32";
+  ctx.fillRect(pos.x, pos.y + 16, 80, 20);
+  ctx.fillStyle = "#32243a";
+  ctx.fillRect(pos.x + 2, pos.y + 18, 36, 16);
+  ctx.fillRect(pos.x + 42, pos.y + 18, 36, 16);
+  // Cushion divider
+  ctx.fillStyle = "#1a1018";
+  ctx.fillRect(pos.x + 39, pos.y + 18, 2, 16);
+  // Armrests
+  ctx.fillStyle = "#1a1018";
+  ctx.fillRect(pos.x - 4, pos.y + 8, 6, 28);
+  ctx.fillRect(pos.x + 78, pos.y + 8, 6, 28);
+  // Legs
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(pos.x + 2, pos.y + 36, 4, 6);
+  ctx.fillRect(pos.x + 74, pos.y + 36, 4, 6);
+  // Throw pillow
+  ctx.fillStyle = "#7c3aed";
+  ctx.fillRect(pos.x + 6, pos.y + 10, 12, 10);
+  ctx.fillStyle = "#8b5cf6";
+  ctx.fillRect(pos.x + 7, pos.y + 11, 10, 8);
+  // Small side table
+  ctx.fillStyle = "#1a1410";
+  ctx.fillRect(pos.x + 86, pos.y + 20, 20, 3);
+  ctx.fillRect(pos.x + 86, pos.y + 16, 20, 3);
+  ctx.fillStyle = "#141010";
+  ctx.fillRect(pos.x + 90, pos.y + 23, 3, 14);
+  ctx.fillRect(pos.x + 100, pos.y + 23, 3, 14);
+  // Mug on side table
+  ctx.fillStyle = "#f59e0b";
+  ctx.fillRect(pos.x + 92, pos.y + 13, 6, 4);
+  ctx.fillStyle = "#d97706";
+  ctx.fillRect(pos.x + 98, pos.y + 14, 2, 2);
+}
+
+function drawWaterCooler(ctx: CanvasRenderingContext2D, pos: Position, time: number) {
+  // Base
+  ctx.fillStyle = "#e0e0e0";
+  ctx.fillRect(pos.x, pos.y + 30, 16, 24);
+  ctx.fillStyle = "#d0d0d0";
+  ctx.fillRect(pos.x + 2, pos.y + 32, 12, 20);
+  // Water jug on top
+  ctx.fillStyle = "#88ccff";
+  ctx.fillRect(pos.x + 2, pos.y, 12, 30);
+  ctx.fillStyle = "#aaddff";
+  ctx.fillRect(pos.x + 4, pos.y + 2, 8, 26);
+  // Water level animated
+  const waterLevel = 14 + Math.sin(time * 0.005) * 2;
+  ctx.fillStyle = "#66bbff";
+  ctx.fillRect(pos.x + 4, pos.y + 2 + waterLevel, 8, 26 - waterLevel);
+  // Tap
+  ctx.fillStyle = "#aaaaaa";
+  ctx.fillRect(pos.x + 6, pos.y + 30, 4, 3);
+  // Drip catch
+  ctx.fillStyle = "#888888";
+  ctx.fillRect(pos.x + 2, pos.y + 52, 12, 2);
+  // Cup
+  ctx.fillStyle = "#f5f5f5";
+  ctx.fillRect(pos.x + 18, pos.y + 46, 5, 6);
+  // Bubble animation
+  if (Math.sin(time * 0.03) > 0.7) {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.beginPath();
+    ctx.arc(pos.x + 8, pos.y + 10 + (time * 0.1 % 8), 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 export function drawAmbientEffects(ctx: CanvasRenderingContext2D, time: number) {
   // Floating dust particles (more, spread across bigger canvas)
   const particles = [
@@ -610,73 +858,140 @@ export function drawAmbientEffects(ctx: CanvasRenderingContext2D, time: number) 
 
 // Draw LOKI the cat! 🐱
 export function drawLoki(ctx: CanvasRenderingContext2D, time: number) {
-  // Loki wanders near NYX's desk
-  const baseX = 220;
-  const baseY = 340;
-  const wanderX = baseX + Math.sin(time * 0.008) * 20;
-  const wanderY = baseY + Math.cos(time * 0.006) * 8;
+  // Loki wanders around the office — bigger patrol area
+  const baseX = 380;
+  const baseY = 380;
+  const wanderX = baseX + Math.sin(time * 0.005) * 80 + Math.sin(time * 0.003) * 30;
+  const wanderY = baseY + Math.cos(time * 0.004) * 40 + Math.cos(time * 0.007) * 15;
   const bobY = Math.sin(time * 0.04) * 1;
 
+  // Determine if Loki is walking or sitting
+  const speed = Math.abs(Math.cos(time * 0.005)) + Math.abs(Math.cos(time * 0.004));
+  const isSitting = speed < 0.6;
+  // Determine facing direction
+  const facingRight = Math.cos(time * 0.005) > 0;
+
   // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.2)";
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath();
-  ctx.ellipse(wanderX + 10, wanderY + 20 + bobY, 10, 3, 0, 0, Math.PI * 2);
+  ctx.ellipse(wanderX + 12, wanderY + 24 + bobY, 12, 4, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Body (dark grey/black cat)
-  ctx.fillStyle = "#2a2a2a";
-  ctx.fillRect(wanderX + 2, wanderY + 10 + bobY, 16, 8);
-  // Head
-  ctx.fillStyle = "#333333";
-  ctx.fillRect(wanderX + 14, wanderY + 6 + bobY, 10, 10);
-  // Ears
-  ctx.fillStyle = "#2a2a2a";
-  ctx.fillRect(wanderX + 14, wanderY + 3 + bobY, 3, 4);
-  ctx.fillRect(wanderX + 21, wanderY + 3 + bobY, 3, 4);
-  // Inner ears
-  ctx.fillStyle = "#e8a0a0";
-  ctx.fillRect(wanderX + 15, wanderY + 4 + bobY, 1, 2);
-  ctx.fillRect(wanderX + 22, wanderY + 4 + bobY, 1, 2);
-  // Eyes (green, cat-like)
-  const blink = Math.sin(time * 0.02) > 0.95;
+  const dx = facingRight ? 1 : -1;
+  const ox = facingRight ? 0 : 24; // flip offset
+
+  if (isSitting) {
+    // === SITTING POSE ===
+    // Body (rounder when sitting)
+    ctx.fillStyle = "#333333";
+    ctx.fillRect(wanderX + 4, wanderY + 10 + bobY, 16, 12);
+    ctx.fillStyle = "#3a3a3a";
+    ctx.fillRect(wanderX + 6, wanderY + 11 + bobY, 12, 10);
+    // Head
+    ctx.fillStyle = "#383838";
+    ctx.fillRect(wanderX + 6, wanderY + 2 + bobY, 12, 10);
+    // Ears
+    ctx.fillStyle = "#333333";
+    ctx.fillRect(wanderX + 5, wanderY - 1 + bobY, 4, 4);
+    ctx.fillRect(wanderX + 15, wanderY - 1 + bobY, 4, 4);
+    ctx.fillStyle = "#e8a0a0";
+    ctx.fillRect(wanderX + 6, wanderY + bobY, 2, 2);
+    ctx.fillRect(wanderX + 16, wanderY + bobY, 2, 2);
+    // Tail wraps around body
+    const tailCurl = Math.sin(time * 0.03) * 2;
+    ctx.fillStyle = "#2a2a2a";
+    ctx.fillRect(wanderX + 18, wanderY + 16 + bobY, 6, 3);
+    ctx.fillRect(wanderX + 22 + tailCurl, wanderY + 14 + bobY, 4, 3);
+    // Front paws tucked
+    ctx.fillStyle = "#3a3a3a";
+    ctx.fillRect(wanderX + 6, wanderY + 20 + bobY, 5, 3);
+    ctx.fillRect(wanderX + 13, wanderY + 20 + bobY, 5, 3);
+  } else {
+    // === WALKING POSE ===
+    const legAnim = Math.sin(time * 0.08) * 2;
+    // Body
+    ctx.fillStyle = "#333333";
+    const bodyX = facingRight ? wanderX + 2 : wanderX + 6;
+    ctx.fillRect(bodyX, wanderY + 10 + bobY, 18, 10);
+    ctx.fillStyle = "#3a3a3a";
+    ctx.fillRect(bodyX + 2, wanderY + 11 + bobY, 14, 8);
+    // Head (offset in facing direction)
+    const headX = facingRight ? wanderX + 16 : wanderX - 2;
+    ctx.fillStyle = "#383838";
+    ctx.fillRect(headX, wanderY + 6 + bobY, 12, 10);
+    // Ears
+    ctx.fillStyle = "#333333";
+    ctx.fillRect(headX - 1, wanderY + 3 + bobY, 4, 4);
+    ctx.fillRect(headX + 9, wanderY + 3 + bobY, 4, 4);
+    ctx.fillStyle = "#e8a0a0";
+    ctx.fillRect(headX, wanderY + 4 + bobY, 2, 2);
+    ctx.fillRect(headX + 10, wanderY + 4 + bobY, 2, 2);
+    // Tail up (animated)
+    const tailWave = Math.sin(time * 0.06) * 3;
+    const tailX = facingRight ? wanderX - 2 : wanderX + 22;
+    const tailDir = facingRight ? -1 : 1;
+    ctx.fillStyle = "#2a2a2a";
+    ctx.fillRect(tailX, wanderY + 11 + bobY, 5, 2);
+    ctx.fillRect(tailX + tailDir * 3, wanderY + 8 + bobY + tailWave, 4, 2);
+    ctx.fillRect(tailX + tailDir * 5, wanderY + 5 + bobY + tailWave * 1.3, 3, 2);
+    // Walking legs (animated)
+    ctx.fillStyle = "#2a2a2a";
+    ctx.fillRect(bodyX + 2, wanderY + 19 + bobY + legAnim, 3, 5);
+    ctx.fillRect(bodyX + 8, wanderY + 19 + bobY - legAnim, 3, 5);
+    ctx.fillRect(bodyX + 12, wanderY + 19 + bobY + legAnim * 0.8, 3, 5);
+    // Paws
+    ctx.fillStyle = "#444444";
+    ctx.fillRect(bodyX + 1, wanderY + 23 + bobY + legAnim, 4, 2);
+    ctx.fillRect(bodyX + 7, wanderY + 23 + bobY - legAnim, 4, 2);
+    ctx.fillRect(bodyX + 11, wanderY + 23 + bobY + legAnim * 0.8, 4, 2);
+  }
+
+  // Eyes (always drawn — green, cat-like)
+  const eyeBaseX = isSitting ? wanderX + 7 : (facingRight ? wanderX + 18 : wanderX);
+  const eyeBaseY = wanderY + (isSitting ? 5 : 9) + bobY;
+  const blink = Math.sin(time * 0.015) > 0.93;
   if (!blink) {
     ctx.fillStyle = "#4ade80";
-    ctx.fillRect(wanderX + 16, wanderY + 9 + bobY, 2, 2);
-    ctx.fillRect(wanderX + 21, wanderY + 9 + bobY, 2, 2);
-    // Pupils
+    ctx.fillRect(eyeBaseX, eyeBaseY, 3, 3);
+    ctx.fillRect(eyeBaseX + 6, eyeBaseY, 3, 3);
+    // Slit pupils
     ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(wanderX + 17, wanderY + 9 + bobY, 1, 2);
-    ctx.fillRect(wanderX + 22, wanderY + 9 + bobY, 1, 2);
+    ctx.fillRect(eyeBaseX + 1, eyeBaseY, 1, 3);
+    ctx.fillRect(eyeBaseX + 7, eyeBaseY, 1, 3);
+    // Eye shine
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.fillRect(eyeBaseX, eyeBaseY, 1, 1);
+    ctx.fillRect(eyeBaseX + 6, eyeBaseY, 1, 1);
   } else {
-    ctx.fillStyle = "#333333";
-    ctx.fillRect(wanderX + 16, wanderY + 10 + bobY, 2, 1);
-    ctx.fillRect(wanderX + 21, wanderY + 10 + bobY, 2, 1);
+    ctx.fillStyle = "#383838";
+    ctx.fillRect(eyeBaseX, eyeBaseY + 1, 3, 1);
+    ctx.fillRect(eyeBaseX + 6, eyeBaseY + 1, 3, 1);
   }
   // Nose
   ctx.fillStyle = "#e8a0a0";
-  ctx.fillRect(wanderX + 19, wanderY + 12 + bobY, 2, 1);
-  // Tail (animated wave)
-  const tailWave = Math.sin(time * 0.05) * 3;
-  ctx.fillStyle = "#2a2a2a";
-  ctx.fillRect(wanderX - 2, wanderY + 11 + bobY, 5, 2);
-  ctx.fillRect(wanderX - 5 + tailWave, wanderY + 9 + bobY, 4, 2);
-  ctx.fillRect(wanderX - 7 + tailWave * 1.5, wanderY + 7 + bobY, 3, 2);
-  // Legs
-  ctx.fillStyle = "#252525";
-  ctx.fillRect(wanderX + 4, wanderY + 17 + bobY, 2, 4);
-  ctx.fillRect(wanderX + 10, wanderY + 17 + bobY, 2, 4);
-  ctx.fillRect(wanderX + 16, wanderY + 15 + bobY, 2, 4);
-  // Paws
-  ctx.fillStyle = "#3a3a3a";
-  ctx.fillRect(wanderX + 3, wanderY + 20 + bobY, 4, 2);
-  ctx.fillRect(wanderX + 9, wanderY + 20 + bobY, 4, 2);
-  ctx.fillRect(wanderX + 15, wanderY + 18 + bobY, 4, 2);
+  const noseX = isSitting ? wanderX + 11 : (facingRight ? wanderX + 22 : wanderX + 4);
+  const noseY = isSitting ? wanderY + 9 : wanderY + 12;
+  ctx.fillRect(noseX, noseY + bobY, 2, 1);
+  // Whiskers (tiny lines)
+  ctx.strokeStyle = "rgba(200, 200, 200, 0.2)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(noseX - 1, noseY + bobY);
+  ctx.lineTo(noseX - 5, noseY - 1 + bobY);
+  ctx.moveTo(noseX - 1, noseY + 1 + bobY);
+  ctx.lineTo(noseX - 5, noseY + 2 + bobY);
+  ctx.moveTo(noseX + 3, noseY + bobY);
+  ctx.lineTo(noseX + 7, noseY - 1 + bobY);
+  ctx.moveTo(noseX + 3, noseY + 1 + bobY);
+  ctx.lineTo(noseX + 7, noseY + 2 + bobY);
+  ctx.stroke();
 
   // "LOKI" label
-  ctx.font = "6px monospace";
-  ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
+  ctx.font = "7px monospace";
+  ctx.fillStyle = "rgba(180, 180, 180, 0.5)";
   ctx.textAlign = "center";
-  ctx.fillText("🐱 LOKI", wanderX + 10, wanderY - 2 + bobY);
+  const labelText = isSitting ? "🐱 LOKI (purring)" : "🐱 LOKI";
+  ctx.fillText(labelText, wanderX + 12, wanderY - 6 + bobY);
   ctx.textAlign = "left";
 }
 

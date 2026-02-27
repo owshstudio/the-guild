@@ -24,9 +24,8 @@ export default function CommsTimeline({
 
       <div className="flex flex-col gap-6 py-4">
         {messages.map((msg, i) => {
-          // Alternate based on sender: nyx = left, hemera/others = right
-          const align =
-            msg.fromAgentId === "nyx" ? "left" : "right";
+          // Alternate based on index: even = left, odd = right
+          const align = i % 2 === 0 ? "left" : "right";
 
           return (
             <motion.div
@@ -41,7 +40,7 @@ export default function CommsTimeline({
                 className="absolute left-1/2 top-5 z-10 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-[#0a0a0a]"
                 style={{
                   backgroundColor:
-                    msg.fromAgentId === "nyx" ? "#7c3aed" : "#d97706",
+                    i % 2 === 0 ? "#7c3aed" : "#d97706",
                 }}
               />
 

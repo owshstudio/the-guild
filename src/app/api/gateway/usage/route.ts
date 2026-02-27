@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { aggregateUsage } from "@/lib/gateway/usage-aggregator";
+import { hasOpenClawInstallation } from "@/lib/gateway/detect";
 import { dailyUsage as mockUsage } from "@/lib/mock-data";
 
 export async function GET() {
   try {
-    const usage = await aggregateUsage();
-    if (usage.length === 0) {
-      return NextResponse.json({ data: mockUsage, source: "mock", error: "No usage data" });
+    const installed = await hasOpenClawInstallation();
+    if (!installed) {
+      return NextResponse.json({ data: mockUsage, source: "mock" });
     }
+
+    const usage = await aggregateUsage();
     return NextResponse.json({ data: usage, source: "live" });
   } catch (error) {
     return NextResponse.json({

@@ -22,10 +22,7 @@ const ACTION_TYPES: { value: ChainActionType; label: string }[] = [
   { value: "notify-human", label: "Notify Human" },
 ];
 
-const AGENTS = [
-  { id: "nyx", name: "NYX" },
-  { id: "hemera", name: "HEMERA" },
-];
+import { useAgents } from "@/lib/data/use-agents";
 
 interface ChainStepEditorProps {
   step: ChainStep;
@@ -44,7 +41,8 @@ export default function ChainStepEditor({
   const [delay, setDelay] = useState(step.trigger.cronExpression || "");
   const [eventName, setEventName] = useState(step.trigger.eventName || "");
   const [actionType, setActionType] = useState<ChainActionType>(step.action.type);
-  const [agentId, setAgentId] = useState(step.action.agentId || "nyx");
+  const { agents } = useAgents();
+  const [agentId, setAgentId] = useState(step.action.agentId || agents[0]?.id || "main");
   const [taskTitle, setTaskTitle] = useState(step.action.taskTitle || "");
   const [taskDescription, setTaskDescription] = useState(step.action.taskDescription || "");
   const [message, setMessage] = useState(step.action.message || "");
@@ -176,7 +174,7 @@ export default function ChainStepEditor({
               value={agentId}
               onChange={(e) => setAgentId(e.target.value)}
             >
-              {AGENTS.map((a) => (
+              {agents.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
                 </option>

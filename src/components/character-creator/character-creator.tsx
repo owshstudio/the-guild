@@ -125,8 +125,7 @@ function lighten(hex: string, amount: number): string {
 
 function getDefaultPalette(agentId: string): CustomPalette {
   const pal = PALETTES[agentId];
-  const defaultHairStyle: HairStyle =
-    agentId === "hemera" ? "puffy" : "long";
+  const defaultHairStyle: HairStyle = "long";
   if (pal) {
     return {
       agentId,

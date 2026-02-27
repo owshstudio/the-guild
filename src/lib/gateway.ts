@@ -1,14 +1,18 @@
+const GATEWAY_PORT =
+  process.env.NEXT_PUBLIC_GATEWAY_PORT || "18789";
+
 const GATEWAY_URL =
-  process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:4444";
+  process.env.NEXT_PUBLIC_GATEWAY_URL ||
+  `http://localhost:${GATEWAY_PORT}`;
 
 export async function checkGatewayHealth(): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${GATEWAY_URL}/health`, {
-      method: "GET",
-      signal: controller.signal,
-    });
+    const res = await fetch(
+      `${GATEWAY_URL}/__openclaw/control-ui-config.json`,
+      { method: "GET", signal: controller.signal }
+    );
     clearTimeout(timeout);
     return res.ok;
   } catch {

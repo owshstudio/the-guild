@@ -1,57 +1,69 @@
 import type { ActivityEntry } from "@/lib/types";
+import { listAgentDirs, readIdentity } from "./filesystem";
 import { getRecentSessions } from "./session-parser";
 
+interface AgentInfo {
+  id: string;
+  name: string;
+  emoji: string;
+}
+
 export async function buildActivity(limit = 50): Promise<ActivityEntry[]> {
-  const sessions = await getRecentSessions(3);
+  const agentDirs = await listAgentDirs();
   const entries: ActivityEntry[] = [];
   let idCounter = 0;
 
-  for (const session of sessions) {
-    for (const msg of session.messages) {
-      if (entries.length >= limit) break;
+  for (const agentId of agentDirs) {
+    const info = await getAgentInfo(agentId);
+    const sessions = await getRecentSessions(3, agentId);
 
-      if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
-        for (const tool of msg.toolCalls) {
+    for (const session of sessions) {
+      for (const msg of session.messages) {
+        if (entries.length >= limit) break;
+
+        if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+          for (const tool of msg.toolCalls) {
+            entries.push({
+              id: `live-${idCounter++}`,
+              agentId: info.id,
+              agentName: info.name,
+              agentEmoji: info.emoji,
+              action: `Used ${tool.name}`,
+              detail: tool.input.slice(0, 150),
+              timestamp: msg.timestamp || session.startTime || new Date().toISOString(),
+              type: "task",
+            });
+            if (entries.length >= limit) break;
+          }
+        } else if (msg.role === "assistant" && msg.content) {
+          const content = msg.content.slice(0, 200);
+          const isError =
+            content.toLowerCase().includes("error") ||
+            content.toLowerCase().includes("failed") ||
+            content.toLowerCase().includes("exception");
+
           entries.push({
             id: `live-${idCounter++}`,
-            agentId: "nyx",
-            agentName: "NYX",
-            agentEmoji: "\u{1F703}",
-            action: `Used ${tool.name}`,
-            detail: tool.input.slice(0, 150),
+            agentId: info.id,
+            agentName: info.name,
+            agentEmoji: info.emoji,
+            action: isError ? "Error detected" : summarizeAction(content),
+            detail: content.slice(0, 150),
             timestamp: msg.timestamp || session.startTime || new Date().toISOString(),
-            type: "task",
+            type: isError ? "error" : "task",
           });
-          if (entries.length >= limit) break;
+        } else if (msg.role === "system") {
+          entries.push({
+            id: `live-${idCounter++}`,
+            agentId: info.id,
+            agentName: info.name,
+            agentEmoji: info.emoji,
+            action: "System event",
+            detail: msg.content.slice(0, 150),
+            timestamp: msg.timestamp || session.startTime || new Date().toISOString(),
+            type: "system",
+          });
         }
-      } else if (msg.role === "assistant" && msg.content) {
-        const content = msg.content.slice(0, 200);
-        const isError =
-          content.toLowerCase().includes("error") ||
-          content.toLowerCase().includes("failed") ||
-          content.toLowerCase().includes("exception");
-
-        entries.push({
-          id: `live-${idCounter++}`,
-          agentId: "nyx",
-          agentName: "NYX",
-          agentEmoji: "\u{1F703}",
-          action: isError ? "Error detected" : summarizeAction(content),
-          detail: content.slice(0, 150),
-          timestamp: msg.timestamp || session.startTime || new Date().toISOString(),
-          type: isError ? "error" : "task",
-        });
-      } else if (msg.role === "system") {
-        entries.push({
-          id: `live-${idCounter++}`,
-          agentId: "nyx",
-          agentName: "NYX",
-          agentEmoji: "\u{1F703}",
-          action: "System event",
-          detail: msg.content.slice(0, 150),
-          timestamp: msg.timestamp || session.startTime || new Date().toISOString(),
-          type: "system",
-        });
       }
     }
   }
@@ -61,6 +73,23 @@ export async function buildActivity(limit = 50): Promise<ActivityEntry[]> {
   );
 
   return entries.slice(0, limit);
+}
+
+async function getAgentInfo(agentId: string): Promise<AgentInfo> {
+  const subpath = agentId === "main" ? undefined : agentId;
+  const identity = await readIdentity(subpath);
+  return {
+    id: agentId,
+    name: identity?.name || titleCase(agentId),
+    emoji: identity?.emoji || "\u{1F916}",
+  };
+}
+
+function titleCase(str: string): string {
+  return str
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
 }
 
 function summarizeAction(content: string): string {

@@ -154,7 +154,7 @@ export function BudgetConfigPanel({ config, onSave }: BudgetConfigPanelProps) {
         </button>
         {showPerAgent && (
           <div className="mt-4 space-y-4">
-            {["nyx", "hemera"].map((agentId) => (
+            {Object.keys(local.perAgent || {}).concat(Object.keys(local.perAgent || {}).length === 0 ? ["main"] : []).map((agentId) => (
               <div
                 key={agentId}
                 className="rounded-lg border border-[#1f1f1f] bg-[#0a0a0a] p-4"

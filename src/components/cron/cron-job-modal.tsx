@@ -33,7 +33,7 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
   const [scheduleType, setScheduleType] = useState<"every" | "at">("every");
   const [intervalMs, setIntervalMs] = useState(30 * 60_000);
   const [atDatetime, setAtDatetime] = useState("");
-  const [agentId, setAgentId] = useState("nyx");
+  const [agentId, setAgentId] = useState(agents[0]?.id || "main");
   const [sessionTarget, setSessionTarget] = useState("new");
   const [wakeMode, setWakeMode] = useState("auto");
   const [payloadKind, setPayloadKind] = useState<"agentTurn" | "systemEvent">("agentTurn");
@@ -82,7 +82,7 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
       setScheduleType("every");
       setIntervalMs(30 * 60_000);
       setAtDatetime("");
-      setAgentId("nyx");
+      setAgentId(agents[0]?.id || "main");
       setSessionTarget("new");
       setWakeMode("auto");
       setPayloadKind("agentTurn");

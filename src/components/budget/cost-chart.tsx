@@ -42,17 +42,29 @@ function CostTooltip({
   );
 }
 
+const AGENT_COLORS: Record<string, string> = {
+  nyx: "#7c3aed",
+  hemera: "#d97706",
+  main: "#7c3aed",
+};
+
+function getAgentColor(agentId: string, index: number): string {
+  if (AGENT_COLORS[agentId]) return AGENT_COLORS[agentId];
+  const hues = [210, 340, 160, 30, 280, 50];
+  const hue = hues[index % hues.length];
+  return `hsl(${hue}, 60%, 50%)`;
+}
+
 export function CostChart({ costs }: CostChartProps) {
-  // Group costs by date, stacking nyx and hemera
-  const dateMap = new Map<string, { date: string; nyx: number; hemera: number }>();
+  // Discover all agent IDs from the data
+  const agentIds = [...new Set(costs.map((c) => c.agentId))];
+
+  // Group costs by date, dynamically keyed by agent
+  const dateMap = new Map<string, Record<string, string | number>>();
 
   for (const c of costs) {
-    const existing = dateMap.get(c.date) || { date: c.date, nyx: 0, hemera: 0 };
-    if (c.agentId === "nyx") {
-      existing.nyx += c.estimatedCost;
-    } else if (c.agentId === "hemera") {
-      existing.hemera += c.estimatedCost;
-    }
+    const existing = dateMap.get(c.date) || { date: c.date };
+    existing[c.agentId] = ((existing[c.agentId] as number) || 0) + c.estimatedCost;
     dateMap.set(c.date, existing);
   }
 
@@ -80,20 +92,16 @@ export function CostChart({ costs }: CostChartProps) {
               tickFormatter={(v: number) => `$${v.toFixed(0)}`}
             />
             <Tooltip content={<CostTooltip />} />
-            <Bar
-              dataKey="nyx"
-              name="NYX"
-              stackId="costs"
-              fill="#7c3aed"
-              radius={[0, 0, 0, 0]}
-            />
-            <Bar
-              dataKey="hemera"
-              name="HEMERA"
-              stackId="costs"
-              fill="#d97706"
-              radius={[4, 4, 0, 0]}
-            />
+            {agentIds.map((agentId, i) => (
+              <Bar
+                key={agentId}
+                dataKey={agentId}
+                name={agentId.toUpperCase()}
+                stackId="costs"
+                fill={getAgentColor(agentId, i)}
+                radius={i === agentIds.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+              />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       </div>

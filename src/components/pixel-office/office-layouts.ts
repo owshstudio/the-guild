@@ -46,9 +46,10 @@ export interface DeskAssignment {
   chairRow: number;
 }
 
+// Default desk positions — dynamically populated from live agents at runtime.
+// "main" is the primary agent. Additional agents fill remaining desks.
 export const deskAssignments: DeskAssignment[] = [
-  { agentId: "nyx", deskCol: 1, deskRow: 3, chairCol: 1, chairRow: 4 },
-  { agentId: "hemera", deskCol: 5, deskRow: 3, chairCol: 5, chairRow: 4 },
+  { agentId: "main", deskCol: 1, deskRow: 3, chairCol: 1, chairRow: 4 },
 ];
 
 export const COFFEE_MACHINE = { col: 12, row: 2 };

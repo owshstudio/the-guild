@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import type { SessionDetail } from "@/lib/types";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { SessionDetail, SessionMessage } from "@/lib/types";
 
 const PAGE_SIZE = 100;
 
@@ -11,6 +11,8 @@ export function useSessionDetail(sessionId: string | null) {
   const [isLive, setIsLive] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const sseFailedRef = useRef(false);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
@@ -34,6 +36,76 @@ export function useSessionDetail(sessionId: string | null) {
     setIsLoading(false);
   }, [sessionId, page]);
 
+  // Close any existing EventSource
+  const closeSSE = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  }, []);
+
+  // Open SSE stream for live sessions
+  useEffect(() => {
+    if (!sessionId || !isLive || sseFailedRef.current) {
+      closeSSE();
+      return;
+    }
+
+    const es = new EventSource(
+      `/api/gateway/sessions/${sessionId}/stream`
+    );
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      try {
+        const entry = JSON.parse(event.data);
+        // Convert JSONL entry to SessionMessage and append
+        if (entry.type === "message" && entry.message) {
+          const msg = entry.message;
+          const newMessage: SessionMessage = {
+            id: `${sessionId}-sse-${Date.now()}`,
+            role: msg.role,
+            content:
+              typeof msg.content === "string"
+                ? msg.content
+                : Array.isArray(msg.content)
+                  ? msg.content
+                      .filter((b: { type: string }) => b.type === "text")
+                      .map((b: { text?: string }) => b.text || "")
+                      .join("\n")
+                  : "",
+            timestamp: entry.timestamp,
+            model: msg.model,
+          };
+
+          setSession((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              messages: [...prev.messages, newMessage],
+              messageCount: prev.messageCount + 1,
+            };
+          });
+        }
+      } catch {
+        // skip malformed SSE data
+      }
+    };
+
+    es.onerror = () => {
+      // SSE failed — fall back to polling
+      sseFailedRef.current = true;
+      closeSSE();
+    };
+
+    return closeSSE;
+  }, [sessionId, isLive, closeSSE]);
+
+  // Reset SSE failure flag when session changes
+  useEffect(() => {
+    sseFailedRef.current = false;
+  }, [sessionId]);
+
   useEffect(() => {
     if (!sessionId) {
       setSession(null);
@@ -48,12 +120,19 @@ export function useSessionDetail(sessionId: string | null) {
   useEffect(() => {
     fetchSession();
 
+    // If SSE is connected for a live session, poll less frequently
+    const sseActive = isLive && !sseFailedRef.current;
     const interval = setInterval(
       fetchSession,
-      isLive ? 3000 : 30000
+      sseActive ? 30000 : isLive ? 3000 : 30000
     );
     return () => clearInterval(interval);
   }, [fetchSession, isLive]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return closeSSE;
+  }, [closeSSE]);
 
   return { session, isLoading, isLive, page, setPage, hasMore };
 }

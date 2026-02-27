@@ -65,10 +65,24 @@ export interface SessionMeta {
   isActive: boolean;
 }
 
-export async function listSessions(): Promise<SessionMeta[]> {
+export async function listAgentDirs(): Promise<string[]> {
   try {
     const config = await getConfig();
-    const sessionsDir = path.join(config.agentsPath, "main", "sessions");
+    const entries = await readdir(config.agentsPath, { withFileTypes: true });
+    return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch {
+    return [];
+  }
+}
+
+export async function listSessions(agentId?: string): Promise<SessionMeta[]> {
+  try {
+    const config = await getConfig();
+    const sessionsDir = path.join(
+      config.agentsPath,
+      agentId || "main",
+      "sessions"
+    );
     const files = await readdir(sessionsDir);
 
     const sessions: SessionMeta[] = [];
@@ -90,8 +104,33 @@ export async function listSessions(): Promise<SessionMeta[]> {
       });
     }
 
-    sessions.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
+    sessions.sort(
+      (a, b) => b.lastModified.getTime() - a.lastModified.getTime()
+    );
     return sessions;
+  } catch {
+    return [];
+  }
+}
+
+export async function readToolsList(subpath?: string): Promise<string[]> {
+  try {
+    const config = await getConfig();
+    const toolsPath = subpath
+      ? path.join(config.workspacePath, subpath, "TOOLS.md")
+      : path.join(config.workspacePath, "TOOLS.md");
+
+    const content = await readFile(toolsPath, "utf-8");
+    const skills: string[] = [];
+
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("### ")) {
+        skills.push(trimmed.replace("### ", "").trim());
+      }
+    }
+
+    return skills;
   } catch {
     return [];
   }
@@ -100,10 +139,22 @@ export async function listSessions(): Promise<SessionMeta[]> {
 export async function findSessionById(id: string): Promise<string | null> {
   try {
     const config = await getConfig();
-    const sessionsDir = path.join(config.agentsPath, "main", "sessions");
-    const filepath = path.join(sessionsDir, `${id}.jsonl`);
-    const fileStat = await stat(filepath);
-    return fileStat.isFile() ? filepath : null;
+    const agentDirs = await listAgentDirs();
+    for (const agentId of agentDirs) {
+      const filepath = path.join(
+        config.agentsPath,
+        agentId,
+        "sessions",
+        `${id}.jsonl`
+      );
+      try {
+        const fileStat = await stat(filepath);
+        if (fileStat.isFile()) return filepath;
+      } catch {
+        // not in this agent dir
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -171,11 +222,11 @@ export async function getSessionQuickMeta(
             typeof content === "string"
               ? content
               : Array.isArray(content)
-              ? content
-                  .filter((b: { type: string }) => b.type === "text")
-                  .map((b: { text?: string }) => b.text || "")
-                  .join(" ")
-              : "";
+                ? content
+                    .filter((b: { type: string }) => b.type === "text")
+                    .map((b: { text?: string }) => b.text || "")
+                    .join(" ")
+                : "";
           if (text) {
             meta.preview = text.slice(0, 80);
           }

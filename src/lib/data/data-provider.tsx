@@ -6,8 +6,10 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
+import { useToasts } from "@/components/toast-provider";
 
 interface DataContextType {
   isConnected: boolean;
@@ -32,6 +34,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [isChecking, setIsChecking] = useState(true);
   const [dataSource, setDataSource] = useState<"live" | "mock">("mock");
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const prevConnected = useRef<boolean | null>(null);
+  const { addToast } = useToasts();
 
   const check = useCallback(async () => {
     setIsChecking(true);
@@ -41,13 +45,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const connected = json.data?.connected === true;
       setIsConnected(connected);
       setDataSource(json.source === "live" ? "live" : "mock");
+
+      // Toast on connection state change (skip initial check)
+      if (prevConnected.current !== null && prevConnected.current !== connected) {
+        if (connected) {
+          addToast("success", "Gateway connected", "Live data is now available");
+        } else {
+          addToast("warning", "Gateway disconnected", "Falling back to mock data");
+        }
+      }
+      prevConnected.current = connected;
     } catch {
+      if (prevConnected.current === true) {
+        addToast("warning", "Gateway disconnected", "Falling back to mock data");
+      }
       setIsConnected(false);
       setDataSource("mock");
+      prevConnected.current = false;
     }
     setIsChecking(false);
     setLastChecked(new Date());
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     check();

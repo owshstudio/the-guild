@@ -1,19 +1,6 @@
 "use client";
 
-import type { CommChannel } from "@/lib/types";
-
-const AGENTS = [
-  { value: "", label: "All" },
-  { value: "nyx", label: "NYX" },
-  { value: "hemera", label: "HEMERA" },
-];
-
-const TO_AGENTS = [
-  { value: "", label: "All" },
-  { value: "nyx", label: "NYX" },
-  { value: "hemera", label: "HEMERA" },
-  { value: "noah", label: "NOAH" },
-];
+import { useAgents } from "@/lib/data/use-agents";
 
 const CHANNELS: { value: string; label: string }[] = [
   { value: "", label: "All Channels" },
@@ -41,18 +28,31 @@ export default function CommsFilter({
   onToChange,
   onChannelChange,
 }: CommsFilterProps) {
+  const { agents } = useAgents();
+
+  const agentOptions = [
+    { value: "", label: "All" },
+    ...agents.map((a) => ({ value: a.id, label: a.name })),
+  ];
+
+  const toOptions = [
+    { value: "", label: "All" },
+    ...agents.map((a) => ({ value: a.id, label: a.name })),
+    { value: "noah", label: "NOAH" },
+  ];
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <FilterSelect
         label="From"
         value={from}
-        options={AGENTS}
+        options={agentOptions}
         onChange={onFromChange}
       />
       <FilterSelect
         label="To"
         value={to}
-        options={TO_AGENTS}
+        options={toOptions}
         onChange={onToChange}
       />
       <FilterSelect

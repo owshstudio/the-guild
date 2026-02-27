@@ -1,5 +1,5 @@
 import type { AgentCostEntry, BudgetPeriod } from "@/lib/types";
-import { listSessions } from "./filesystem";
+import { listSessions, listAgentDirs } from "./filesystem";
 import { parseSession } from "./session-parser";
 import { MODEL_COSTS } from "./model-costs";
 
@@ -19,7 +19,7 @@ export function calculateSessionCost(
 export async function aggregateCosts(
   period: BudgetPeriod
 ): Promise<AgentCostEntry[]> {
-  const sessions = await listSessions();
+  const agentDirs = await listAgentDirs();
   const now = new Date();
   const cutoff = getCutoffDate(now, period);
 
@@ -35,48 +35,48 @@ export async function aggregateCosts(
     }
   >();
 
-  const recent = sessions.slice(0, 50);
+  for (const agentId of agentDirs) {
+    const sessions = await listSessions(agentId);
+    const recent = sessions.slice(0, 50);
 
-  for (const meta of recent) {
-    try {
-      const parsed = await parseSession(meta.filepath, meta.id);
-      if (!parsed.startTime) continue;
+    for (const meta of recent) {
+      try {
+        const parsed = await parseSession(meta.filepath, meta.id);
+        if (!parsed.startTime) continue;
 
-      const sessionDate = new Date(parsed.startTime);
-      if (sessionDate < cutoff) continue;
+        const sessionDate = new Date(parsed.startTime);
+        if (sessionDate < cutoff) continue;
 
-      const dateKey = formatDateKey(sessionDate);
-      // Default to nyx since sessions are in agents/main
-      const agentId = "nyx";
-      const model = parsed.model || "claude-opus-4-6";
-      const key = `${dateKey}:${agentId}`;
+        const dateKey = formatDateKey(sessionDate);
+        const model = parsed.model || "claude-opus-4-6";
+        const key = `${dateKey}:${agentId}`;
 
-      const existing = costMap.get(key) || {
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        estimatedCost: 0,
-        model,
-        sessionCount: 0,
-      };
+        const existing = costMap.get(key) || {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          estimatedCost: 0,
+          model,
+          sessionCount: 0,
+        };
 
-      // Estimate input/output split from total tokens (60/40 typical ratio)
-      const inputTokens = Math.round(parsed.totalTokens * 0.6);
-      const outputTokens = parsed.totalTokens - inputTokens;
-      const cost =
-        parsed.totalCost > 0
-          ? parsed.totalCost
-          : calculateSessionCost(inputTokens, outputTokens, model);
+        const inputTokens = Math.round(parsed.totalTokens * 0.6);
+        const outputTokens = parsed.totalTokens - inputTokens;
+        const cost =
+          parsed.totalCost > 0
+            ? parsed.totalCost
+            : calculateSessionCost(inputTokens, outputTokens, model);
 
-      existing.inputTokens += inputTokens;
-      existing.outputTokens += outputTokens;
-      existing.totalTokens += parsed.totalTokens;
-      existing.estimatedCost += cost;
-      existing.sessionCount += 1;
+        existing.inputTokens += inputTokens;
+        existing.outputTokens += outputTokens;
+        existing.totalTokens += parsed.totalTokens;
+        existing.estimatedCost += cost;
+        existing.sessionCount += 1;
 
-      costMap.set(key, existing);
-    } catch {
-      // Skip on parse error
+        costMap.set(key, existing);
+      } catch {
+        // Skip on parse error
+      }
     }
   }
 
@@ -120,36 +120,16 @@ function getCutoffDate(now: Date, period: BudgetPeriod): Date {
 
 function formatDateKey(date: Date): string {
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
   return `${months[date.getMonth()]} ${date.getDate()}`;
 }
 
 function parseDateKey(key: string): Date {
   const months: Record<string, number> = {
-    Jan: 0,
-    Feb: 1,
-    Mar: 2,
-    Apr: 3,
-    May: 4,
-    Jun: 5,
-    Jul: 6,
-    Aug: 7,
-    Sep: 8,
-    Oct: 9,
-    Nov: 10,
-    Dec: 11,
+    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
   };
   const [month, day] = key.split(" ");
   const year = new Date().getFullYear();

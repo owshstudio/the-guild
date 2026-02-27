@@ -37,7 +37,7 @@ export default function RootLayout({
           <ToastProvider>
             <DispatchProvider>
               <Sidebar />
-              <main className="ml-60 min-h-screen">
+              <main className="min-h-screen pt-14 lg:pt-0 lg:ml-60">
                 <GatewayBanner />
                 <BudgetAlertBanner />
                 {children}

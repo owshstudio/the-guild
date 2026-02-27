@@ -60,29 +60,37 @@ function formatTokens(n: number): string {
 export default function UsagePage() {
   const [activeTab, setActiveTab] = useState<Tab>("tokens");
   const { agents } = useAgents();
-  const { usage: dailyUsage } = useUsage();
+  const { usage: dailyUsage, isLive } = useUsage();
   const { costs } = useCosts();
   const { config, updateConfig } = useBudget(costs);
 
-  const nyxAgent = agents.find((a) => a.id === "nyx") || agents[0];
-  const hemeraAgent = agents.find((a) => a.id === "hemera") || agents[1];
-
-  const nyxTotal = dailyUsage.reduce((sum, d) => sum + d.nyx, 0);
-  const hemeraTotal = dailyUsage.reduce((sum, d) => sum + d.hemera, 0);
-  const nyxDaysActive = dailyUsage.filter((d) => d.nyx > 0).length;
-  const nyxAvg = nyxDaysActive > 0 ? Math.round(nyxTotal / nyxDaysActive) : 0;
+  // Compute per-agent totals dynamically
+  const agentStats = useMemo(() => {
+    return agents.map((agent) => {
+      const total = dailyUsage.reduce(
+        (sum, d) => sum + (typeof d[agent.id] === "number" ? (d[agent.id] as number) : 0),
+        0
+      );
+      const daysActive = dailyUsage.filter(
+        (d) => typeof d[agent.id] === "number" && (d[agent.id] as number) > 0
+      ).length;
+      const avg = daysActive > 0 ? Math.round(total / daysActive) : 0;
+      return { agent, total, avg, daysActive };
+    });
+  }, [agents, dailyUsage]);
 
   const cumulativeData = useMemo(() => {
-    let nyxCum = 0;
-    let hemeraCum = 0;
+    const cumTotals: Record<string, number> = {};
     return dailyUsage.map((d) => {
-      nyxCum += d.nyx;
-      hemeraCum += d.hemera;
-      return { date: d.date, nyx: nyxCum, hemera: hemeraCum };
+      const entry: Record<string, string | number> = { date: d.date };
+      for (const agent of agents) {
+        const val = typeof d[agent.id] === "number" ? (d[agent.id] as number) : 0;
+        cumTotals[agent.id] = (cumTotals[agent.id] || 0) + val;
+        entry[agent.id] = cumTotals[agent.id];
+      }
+      return entry;
     });
-  }, [dailyUsage]);
-
-  if (!nyxAgent || !hemeraAgent) return null;
+  }, [dailyUsage, agents]);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "tokens", label: "Tokens" },
@@ -92,11 +100,22 @@ export default function UsagePage() {
 
   return (
     <div className="min-h-screen p-6">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-white">Usage</h1>
-        <p className="mt-1 text-sm text-[#737373]">
-          Token usage, model info, and uptime metrics
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Usage</h1>
+          <p className="mt-1 text-sm text-[#737373]">
+            Token usage, model info, and uptime metrics
+          </p>
+        </div>
+        {isLive && (
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#22c55e]" />
+            </span>
+            <span className="text-xs font-medium text-[#22c55e]">LIVE</span>
+          </div>
+        )}
       </div>
 
       {/* Tab bar */}
@@ -119,106 +138,77 @@ export default function UsagePage() {
       {/* Tokens tab */}
       {activeTab === "tokens" && (
         <>
-          {/* Agent summary cards */}
+          {/* Agent summary cards — dynamic */}
           <div className="mb-8 grid gap-4 sm:grid-cols-2">
-            {/* NYX */}
-            <div className="rounded-xl border border-[#1f1f1f] bg-[#141414] p-5">
-              <div className="mb-4 flex items-center gap-3">
+            {agentStats.map(({ agent, total, avg }) => {
+              const statusColor =
+                agent.status === "active"
+                  ? "#22c55e"
+                  : agent.status === "idle"
+                  ? "#eab308"
+                  : "#ef4444";
+              return (
                 <div
-                  className="flex h-10 w-10 items-center justify-center rounded-lg text-lg"
-                  style={{ background: nyxAgent.color + "20" }}
+                  key={agent.id}
+                  className="rounded-xl border border-[#1f1f1f] bg-[#141414] p-5"
                 >
-                  {nyxAgent.emoji}
+                  <div className="mb-4 flex items-center gap-3">
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-lg text-lg"
+                      style={{ background: agent.color + "20" }}
+                    >
+                      {agent.emoji}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">{agent.name}</h3>
+                      <p className="font-mono text-xs text-[#737373]">
+                        {agent.model}
+                      </p>
+                    </div>
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: statusColor }}
+                      />
+                      <span className="text-xs capitalize text-[#737373]">
+                        {agent.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
+                        Avg/Day
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-white">
+                        {formatTokens(avg)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
+                        Total
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-white">
+                        {formatTokens(total)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
+                        Uptime
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-white">
+                        {agent.uptimeSince
+                          ? `${Math.max(1, Math.floor((Date.now() - new Date(agent.uptimeSince).getTime()) / 86400000))}d`
+                          : "--"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-white">{nyxAgent.name}</h3>
-                  <p className="font-mono text-xs text-[#737373]">
-                    {nyxAgent.model}
-                  </p>
-                </div>
-                <div className="ml-auto flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
-                  <span className="text-xs text-[#737373]">Active</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
-                    Avg/Day
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
-                    {formatTokens(nyxAvg)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
-                    Total
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
-                    {formatTokens(nyxTotal)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
-                    Uptime
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-white">24d</p>
-                </div>
-              </div>
-            </div>
-
-            {/* HEMERA */}
-            <div className="rounded-xl border border-[#1f1f1f] bg-[#141414] p-5">
-              <div className="mb-4 flex items-center gap-3">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-lg text-lg"
-                  style={{ background: hemeraAgent.color + "20" }}
-                >
-                  {hemeraAgent.emoji}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">
-                    {hemeraAgent.name}
-                  </h3>
-                  <p className="font-mono text-xs text-[#737373]">
-                    {hemeraAgent.model}
-                  </p>
-                </div>
-                <div className="ml-auto flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[#eab308]" />
-                  <span className="text-xs text-[#737373]">Idle</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
-                    Avg/Day
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
-                    {formatTokens(hemeraTotal)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
-                    Total
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
-                    {formatTokens(hemeraTotal)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-[#525252]">
-                    Uptime
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
-                    &lt;1d
-                  </p>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
 
-          {/* Daily tokens bar chart */}
+          {/* Daily tokens bar chart — dynamic */}
           <div className="mb-8 rounded-xl border border-[#1f1f1f] bg-[#141414] p-5">
             <h3 className="mb-4 text-sm font-medium text-[#d4d4d4]">
               Daily Token Usage
@@ -240,24 +230,21 @@ export default function UsagePage() {
                     tickFormatter={formatTokens}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar
-                    dataKey="nyx"
-                    name="NYX"
-                    fill="#7c3aed"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="hemera"
-                    name="HEMERA"
-                    fill="#d97706"
-                    radius={[4, 4, 0, 0]}
-                  />
+                  {agents.map((agent) => (
+                    <Bar
+                      key={agent.id}
+                      dataKey={agent.id}
+                      name={agent.name}
+                      fill={agent.color}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  ))}
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Cumulative line chart */}
+          {/* Cumulative line chart — dynamic */}
           <div className="rounded-xl border border-[#1f1f1f] bg-[#141414] p-5">
             <h3 className="mb-4 text-sm font-medium text-[#d4d4d4]">
               Cumulative Token Usage
@@ -279,22 +266,17 @@ export default function UsagePage() {
                     tickFormatter={formatTokens}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="nyx"
-                    name="NYX"
-                    stroke="#7c3aed"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="hemera"
-                    name="HEMERA"
-                    stroke="#d97706"
-                    strokeWidth={2}
-                    dot={false}
-                  />
+                  {agents.map((agent) => (
+                    <Line
+                      key={agent.id}
+                      type="monotone"
+                      dataKey={agent.id}
+                      name={agent.name}
+                      stroke={agent.color}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  ))}
                 </LineChart>
               </ResponsiveContainer>
             </div>

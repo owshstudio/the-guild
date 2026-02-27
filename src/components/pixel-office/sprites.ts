@@ -42,6 +42,60 @@ export interface CharPalette {
   eyePupil: string;
 }
 
+// Color utility functions for dynamic palette generation
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.substring(0, 2), 16),
+    parseInt(h.substring(2, 4), 16),
+    parseInt(h.substring(4, 6), 16),
+  ];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return (
+    "#" +
+    [r, g, b]
+      .map((c) =>
+        Math.max(0, Math.min(255, Math.round(c)))
+          .toString(16)
+          .padStart(2, "0")
+      )
+      .join("")
+  );
+}
+
+export function darken(hex: string, pct: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  const f = 1 - pct / 100;
+  return rgbToHex(r * f, g * f, b * f);
+}
+
+export function lighten(hex: string, pct: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  const f = pct / 100;
+  return rgbToHex(r + (255 - r) * f, g + (255 - g) * f, b + (255 - b) * f);
+}
+
+export function generatePalette(baseColor: string): CharPalette {
+  return {
+    skin: "#f0d0b0",
+    skinShadow: "#d4b494",
+    shirt: baseColor,
+    shirtShadow: darken(baseColor, 20),
+    shirtAccent: lighten(baseColor, 20),
+    pants: darken(baseColor, 60),
+    pantsShadow: darken(baseColor, 75),
+    hair: darken(baseColor, 30),
+    hairDark: darken(baseColor, 50),
+    hairLight: lighten(baseColor, 15),
+    shoes: darken(baseColor, 80),
+    outline: darken(baseColor, 80),
+    eyeWhite: "#ffffff",
+    eyePupil: darken(baseColor, 80),
+  };
+}
+
 export const PALETTES: Record<string, CharPalette> = {
   nyx: {
     skin: "#e0d0f0",
@@ -587,7 +641,11 @@ export function getPalette(
     }
   }
   const pal = PALETTES[agentId];
-  if (!pal) throw new Error(`Unknown palette: ${agentId}`);
+  if (!pal) {
+    return agentId.startsWith("#")
+      ? generatePalette(agentId)
+      : generatePalette("#6b7280");
+  }
   return pal;
 }
 
@@ -623,7 +681,12 @@ export function getCharacterSprites(
     };
   } else {
     pal = PALETTES[paletteId];
-    if (!pal) throw new Error(`Unknown palette: ${paletteId}`);
+    if (!pal) {
+      // Generate palette from hex color or use neutral fallback
+      pal = paletteId.startsWith("#")
+        ? generatePalette(paletteId)
+        : generatePalette("#6b7280");
+    }
   }
 
   let template = CHARACTER_TEMPLATES[paletteId] || NYX_IDLE;

@@ -4,8 +4,6 @@ import { useState } from "react";
 import type { CommChannel, CommMessage } from "@/lib/types";
 
 const AGENT_META: Record<string, { name: string; emoji: string; color: string }> = {
-  nyx: { name: "NYX", emoji: "\u{1F703}", color: "#7c3aed" },
-  hemera: { name: "HEMERA", emoji: "\u2600\uFE0F", color: "#d97706" },
   noah: { name: "NOAH", emoji: "\u{1F468}\u200D\u{1F4BB}", color: "#3b82f6" },
 };
 

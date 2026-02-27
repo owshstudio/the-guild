@@ -4,6 +4,7 @@ import { Task, TaskStatus } from "@/lib/types";
 
 interface TaskCardProps {
   task: Task;
+  draggable?: boolean;
 }
 
 const statusConfig: Record<
@@ -24,34 +25,55 @@ const priorityColors: Record<string, { bg: string; text: string }> = {
   low: { bg: "#52525220", text: "#737373" },
 };
 
-export default function TaskCard({ task }: TaskCardProps) {
+export default function TaskCard({ task, draggable }: TaskCardProps) {
   const status = statusConfig[task.status];
   const priority = priorityColors[task.priority] || priorityColors.low;
 
   return (
     <div
-      className={`rounded-lg border border-[#1f1f1f] bg-[#141414] p-3 transition hover:border-[#2a2a2a] hover:bg-[#1a1a1a] ${
+      className={`group rounded-lg border border-[#1f1f1f] bg-[#141414] p-3 transition hover:border-[#2a2a2a] hover:bg-[#1a1a1a] ${
         task.status === "completed" ? "opacity-60" : ""
       }`}
     >
-      <div className="mb-2 flex items-center gap-2">
-        <span
-          className="rounded px-1.5 py-0.5 text-[10px] font-medium"
-          style={{ backgroundColor: status.bg, color: status.text }}
-        >
-          {status.label}
-        </span>
-        <span
-          className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
-          style={{ backgroundColor: priority.bg, color: priority.text }}
-        >
-          {task.priority}
-        </span>
+      <div className="flex items-start gap-2">
+        {/* Drag handle */}
+        {draggable && (
+          <div className="mt-0.5 flex flex-col gap-[3px] opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="flex gap-[3px]">
+              <span className="h-[3px] w-[3px] rounded-full bg-[#525252]" />
+              <span className="h-[3px] w-[3px] rounded-full bg-[#525252]" />
+            </div>
+            <div className="flex gap-[3px]">
+              <span className="h-[3px] w-[3px] rounded-full bg-[#525252]" />
+              <span className="h-[3px] w-[3px] rounded-full bg-[#525252]" />
+            </div>
+            <div className="flex gap-[3px]">
+              <span className="h-[3px] w-[3px] rounded-full bg-[#525252]" />
+              <span className="h-[3px] w-[3px] rounded-full bg-[#525252]" />
+            </div>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="mb-2 flex items-center gap-2">
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-medium"
+              style={{ backgroundColor: status.bg, color: status.text }}
+            >
+              {status.label}
+            </span>
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
+              style={{ backgroundColor: priority.bg, color: priority.text }}
+            >
+              {task.priority}
+            </span>
+          </div>
+          <h4 className="text-sm font-medium text-[#e5e5e5]">{task.title}</h4>
+          <p className="mt-1.5 line-clamp-2 text-xs text-[#737373]">
+            {task.description}
+          </p>
+        </div>
       </div>
-      <h4 className="text-sm font-medium text-[#e5e5e5]">{task.title}</h4>
-      <p className="mt-1.5 line-clamp-2 text-xs text-[#737373]">
-        {task.description}
-      </p>
     </div>
   );
 }

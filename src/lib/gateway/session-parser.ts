@@ -38,7 +38,6 @@ export async function parseSession(
   let model: string | null = null;
   let isActive = false;
 
-  // Pending tool_use blocks waiting to be matched with tool_result
   const pendingToolUses = new Map<
     string,
     { name: string; input: string; msgIndex: number; callIndex: number }
@@ -68,7 +67,6 @@ export async function parseSession(
             timestamp: entry.timestamp,
           };
 
-          // Extract model
           if (entry.message.model) {
             msg.model = entry.message.model;
             if (!model) model = entry.message.model;
@@ -77,7 +75,6 @@ export async function parseSession(
             if (!model) model = entry.model;
           }
 
-          // Extract thinking content
           if (
             entry.message.role === "assistant" &&
             Array.isArray(entry.message.content)
@@ -92,12 +89,10 @@ export async function parseSession(
             }
           }
 
-          // Extract tool calls from assistant messages
           if (entry.message.role === "assistant" && entry.message.content) {
             const toolCalls = extractToolCalls(entry.message.content);
             if (toolCalls.length > 0) {
               msg.toolCalls = toolCalls;
-              // Track pending tool_use IDs for pairing
               if (Array.isArray(entry.message.content)) {
                 for (const block of entry.message.content) {
                   if (block.type === "tool_use" && block.id) {
@@ -118,7 +113,6 @@ export async function parseSession(
             }
           }
 
-          // Pair tool_result with tool_use
           if (
             entry.message.role === "user" &&
             Array.isArray(entry.message.content)
@@ -133,11 +127,11 @@ export async function parseSession(
                       typeof block.content === "string"
                         ? block.content
                         : Array.isArray(block.content)
-                        ? block.content
-                            .filter((b: { type: string }) => b.type === "text")
-                            .map((b: { text?: string }) => b.text || "")
-                            .join("\n")
-                        : "";
+                          ? block.content
+                              .filter((b: { type: string }) => b.type === "text")
+                              .map((b: { text?: string }) => b.text || "")
+                              .join("\n")
+                          : "";
                     targetMsg.toolCalls[pending.callIndex].output =
                       resultContent.slice(0, 500);
                   }
@@ -150,7 +144,6 @@ export async function parseSession(
           allMessages.push(msg);
         }
 
-        // Extract usage/cost
         if (entry.type === "usage" || entry.usage) {
           const usage = entry.usage || entry;
           const input = usage.inputTokens || usage.input_tokens || 0;
@@ -159,7 +152,6 @@ export async function parseSession(
           if (usage.cost?.total) {
             totalCost += usage.cost.total;
           }
-          // Attach usage to the last assistant message
           const lastAssistant = [...allMessages]
             .reverse()
             .find((m) => m.role === "assistant");
@@ -189,7 +181,6 @@ export async function parseSession(
     // File read error
   }
 
-  // Apply pagination
   const offset = options?.offset ?? 0;
   const limit = options?.limit;
   const messages =
@@ -237,9 +228,10 @@ function extractToolCalls(
 }
 
 export async function getRecentSessions(
-  limit = 5
+  limit = 5,
+  agentId?: string
 ): Promise<ParsedSession[]> {
-  const metas = await listSessions();
+  const metas = await listSessions(agentId);
   const recent = metas.slice(0, limit);
   const parsed = await Promise.all(
     recent.map((m) => parseSession(m.filepath, m.id))

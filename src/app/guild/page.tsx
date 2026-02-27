@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Agent } from "@/lib/types";
+import { useState, useRef, useCallback } from "react";
+import { Agent, CommandEntry } from "@/lib/types";
 import { useAgents } from "@/lib/data/use-agents";
 import { useDispatchContext } from "@/components/dispatch/dispatch-provider";
 import { useActions } from "@/lib/data/use-actions";
@@ -17,6 +17,45 @@ export default function GuildPage() {
   const { execute, isExecuting } = useActions();
   const { addToast } = useToasts();
   const [showKillConfirm, setShowKillConfirm] = useState(false);
+  const [commandHistory, setCommandHistory] = useState<CommandEntry[]>([]);
+  const [commandInput, setCommandInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const sendCommand = useCallback(
+    (agentId: string, command: string) => {
+      const entry: CommandEntry = {
+        id: crypto.randomUUID(),
+        agentId,
+        command,
+        timestamp: new Date().toISOString(),
+        status: "pending",
+      };
+      setCommandHistory((prev) => [entry, ...prev]);
+      addToast("info", "Command sent", `Sent to ${agentId.toUpperCase()}`);
+
+      // Simulate response after delay (gateway would handle this in production)
+      setTimeout(() => {
+        setCommandHistory((prev) =>
+          prev.map((e) =>
+            e.id === entry.id
+              ? { ...e, status: "completed", response: "Acknowledged" }
+              : e
+          )
+        );
+      }, 1500);
+    },
+    [addToast]
+  );
+
+  const handleSendCommand = () => {
+    if (!commandInput.trim() || !selectedAgent) return;
+    sendCommand(selectedAgent.id, commandInput.trim());
+    setCommandInput("");
+  };
+
+  const agentCommands = commandHistory.filter(
+    (c) => c.agentId === selectedAgent?.id
+  );
 
   return (
     <div className="relative min-h-screen flex flex-col">
@@ -46,10 +85,6 @@ export default function GuildPage() {
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
             STOPPED
           </span>
-          <span className="text-white/15">|</span>
-          <span>🐱 LOKI</span>
-          <span>🜃 NYX</span>
-          <span>☀️ HEMERA</span>
         </div>
       </div>
 
@@ -72,195 +107,282 @@ export default function GuildPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed right-0 top-0 z-50 h-full w-96 border-l border-[#1f1f1f] bg-[#0c0c0c] p-6 shadow-2xl"
+              className="fixed right-0 top-0 z-50 h-full w-96 border-l border-[#1f1f1f] bg-[#0c0c0c] shadow-2xl overflow-y-auto"
             >
-              {/* Close */}
-              <button
-                onClick={() => setSelectedAgent(null)}
-                className="absolute right-4 top-4 rounded-lg p-2 text-[#525252] transition hover:bg-white/[0.05] hover:text-[#a3a3a3]"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </button>
-
-              {/* Agent info */}
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-12 w-12 items-center justify-center rounded-xl text-2xl"
-                  style={{ background: selectedAgent.color + "20" }}
+              <div className="p-6">
+                {/* Close */}
+                <button
+                  onClick={() => setSelectedAgent(null)}
+                  className="absolute right-4 top-4 rounded-lg p-2 text-[#525252] transition hover:bg-white/[0.05] hover:text-[#a3a3a3]"
                 >
-                  {selectedAgent.emoji}
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-white">
-                    {selectedAgent.name}
-                  </h2>
-                  <p className="text-xs text-[#737373]">{selectedAgent.role}</p>
-                </div>
-              </div>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
 
-              {/* Status */}
-              <div className="mt-6">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor:
-                        selectedAgent.status === "active"
-                          ? "#22c55e"
-                          : selectedAgent.status === "idle"
-                          ? "#eab308"
-                          : "#ef4444",
-                    }}
-                  />
-                  <span className="text-sm capitalize text-[#d4d4d4]">
-                    {selectedAgent.status}
-                  </span>
+                {/* Agent info */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-xl text-2xl"
+                    style={{ background: selectedAgent.color + "20" }}
+                  >
+                    {selectedAgent.emoji}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">
+                      {selectedAgent.name}
+                    </h2>
+                    <p className="text-xs text-[#737373]">{selectedAgent.role}</p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Current Task */}
-              {selectedAgent.currentTask && (
+                {/* Status */}
+                <div className="mt-6">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{
+                        backgroundColor:
+                          selectedAgent.status === "active"
+                            ? "#22c55e"
+                            : selectedAgent.status === "idle"
+                            ? "#eab308"
+                            : "#ef4444",
+                      }}
+                    />
+                    <span className="text-sm capitalize text-[#d4d4d4]">
+                      {selectedAgent.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Current Task */}
+                {selectedAgent.currentTask && (
+                  <div className="mt-6">
+                    <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                      Current Task
+                    </h3>
+                    <p className="mt-2 rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-2.5 text-sm text-[#d4d4d4]">
+                      {selectedAgent.currentTask}
+                    </p>
+                  </div>
+                )}
+
+                {/* Description */}
                 <div className="mt-6">
                   <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
-                    Current Task
+                    About
                   </h3>
-                  <p className="mt-2 rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-2.5 text-sm text-[#d4d4d4]">
-                    {selectedAgent.currentTask}
+                  <p className="mt-2 text-sm leading-relaxed text-[#a3a3a3]">
+                    {selectedAgent.description}
                   </p>
                 </div>
-              )}
 
-              {/* Description */}
-              <div className="mt-6">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
-                  About
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#a3a3a3]">
-                  {selectedAgent.description}
-                </p>
-              </div>
-
-              {/* Machine */}
-              <div className="mt-6">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
-                  Machine
-                </h3>
-                <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-                  <span className="font-mono text-xs text-[#a3a3a3]">
-                    {selectedAgent.machine}
-                  </span>
+                {/* Machine */}
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                    Machine
+                  </h3>
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+                    <span className="font-mono text-xs text-[#a3a3a3]">
+                      {selectedAgent.machine}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Gateway */}
-              <div className="mt-6">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
-                  Gateway
-                </h3>
-                <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-1.5">
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      selectedAgent.gateway === "localhost"
-                        ? "bg-[#22c55e]"
-                        : "bg-[#eab308]"
-                    }`}
-                  />
-                  <span className="font-mono text-xs text-[#a3a3a3]">
-                    {selectedAgent.gateway}
-                  </span>
-                </div>
-              </div>
-
-              {/* Model */}
-              <div className="mt-6">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
-                  Model
-                </h3>
-                <div className="mt-2 inline-flex items-center rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-1.5">
-                  <span className="font-mono text-xs text-[#a3a3a3]">
-                    {selectedAgent.model}
-                  </span>
-                </div>
-              </div>
-
-              {/* Last Activity */}
-              <div className="mt-6">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
-                  Last Activity
-                </h3>
-                <p className="mt-2 text-sm text-[#737373]">
-                  {selectedAgent.lastActivity}
-                </p>
-              </div>
-
-              {/* Skills preview */}
-              <div className="mt-6">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
-                  Skills
-                </h3>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {selectedAgent.skills.slice(0, 4).map((skill) => (
+                {/* Gateway */}
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                    Gateway
+                  </h3>
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-1.5">
                     <span
-                      key={skill}
-                      className="rounded-md border border-[#1f1f1f] bg-[#141414] px-2 py-1 text-[11px] text-[#a3a3a3]"
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        selectedAgent.gateway === "localhost"
+                          ? "bg-[#22c55e]"
+                          : "bg-[#eab308]"
+                      }`}
+                    />
+                    <span className="font-mono text-xs text-[#a3a3a3]">
+                      {selectedAgent.gateway}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Model */}
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                    Model
+                  </h3>
+                  <div className="mt-2 inline-flex items-center rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-1.5">
+                    <span className="font-mono text-xs text-[#a3a3a3]">
+                      {selectedAgent.model}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Skills preview */}
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                    Skills
+                  </h3>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedAgent.skills.slice(0, 4).map((skill) => (
+                      <span
+                        key={skill}
+                        className="rounded-md border border-[#1f1f1f] bg-[#141414] px-2 py-1 text-[11px] text-[#a3a3a3]"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {selectedAgent.skills.length > 4 && (
+                      <span className="rounded-md border border-[#1f1f1f] bg-[#141414] px-2 py-1 text-[11px] text-[#525252]">
+                        +{selectedAgent.skills.length - 4} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Command History */}
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                    Command History
+                  </h3>
+                  <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                    {agentCommands.length === 0 ? (
+                      <p className="text-xs text-[#525252]">No commands sent yet</p>
+                    ) : (
+                      agentCommands.slice(0, 10).map((cmd) => (
+                        <div
+                          key={cmd.id}
+                          className="rounded-lg border border-[#1f1f1f] bg-[#141414] px-3 py-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                cmd.status === "completed"
+                                  ? "bg-[#22c55e]"
+                                  : cmd.status === "error"
+                                  ? "bg-[#ef4444]"
+                                  : "bg-[#eab308]"
+                              }`}
+                            />
+                            <span className="font-mono text-xs text-[#e5e5e5] truncate">
+                              {cmd.command}
+                            </span>
+                          </div>
+                          {cmd.response && (
+                            <p className="mt-1 text-[11px] text-[#737373]">
+                              {cmd.response}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                    Quick Actions
+                  </h3>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => sendCommand(selectedAgent.id, "run-task")}
+                      className="rounded-lg border border-[#2a2a2a] px-3 py-1.5 text-xs font-medium text-[#d4d4d4] transition hover:border-[#3a3a3a] hover:bg-white/[0.03]"
                     >
-                      {skill}
-                    </span>
-                  ))}
-                  {selectedAgent.skills.length > 4 && (
-                    <span className="rounded-md border border-[#1f1f1f] bg-[#141414] px-2 py-1 text-[11px] text-[#525252]">
-                      +{selectedAgent.skills.length - 4} more
-                    </span>
-                  )}
+                      Run Task
+                    </button>
+                    <button
+                      onClick={() => sendCommand(selectedAgent.id, "pause")}
+                      className="rounded-lg border border-[#2a2a2a] px-3 py-1.5 text-xs font-medium text-[#d4d4d4] transition hover:border-[#3a3a3a] hover:bg-white/[0.03]"
+                    >
+                      Pause
+                    </button>
+                    <button
+                      onClick={() => sendCommand(selectedAgent.id, "resume")}
+                      className="rounded-lg border border-[#2a2a2a] px-3 py-1.5 text-xs font-medium text-[#d4d4d4] transition hover:border-[#3a3a3a] hover:bg-white/[0.03]"
+                    >
+                      Resume
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Quick Actions */}
-              <div className="mt-6">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
-                  Actions
-                </h3>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => openDispatch(selectedAgent.id)}
-                    className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                      <path d="M14 2L7 9M14 2l-5 12-2-5-5-2 12-5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Send Task
-                  </button>
-                  <button
-                    onClick={() => setShowKillConfirm(true)}
-                    disabled={isExecuting}
-                    className="flex items-center gap-1.5 rounded-lg border border-[#ef4444]/20 px-3 py-1.5 text-xs font-medium text-[#ef4444] transition hover:border-[#ef4444]/40 hover:bg-[#ef4444]/10 disabled:opacity-40"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                    Kill
-                  </button>
+                {/* Actions */}
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                    Actions
+                  </h3>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openDispatch(selectedAgent.id)}
+                      className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M14 2L7 9M14 2l-5 12-2-5-5-2 12-5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Send Task
+                    </button>
+                    <button
+                      onClick={() => setShowKillConfirm(true)}
+                      disabled={isExecuting}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#ef4444]/20 px-3 py-1.5 text-xs font-medium text-[#ef4444] transition hover:border-[#ef4444]/40 hover:bg-[#ef4444]/10 disabled:opacity-40"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                      Kill
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <ConfirmDialog
-                isOpen={showKillConfirm}
-                title="Kill Session"
-                message={`Abort the current session for ${selectedAgent.name}?`}
-                onConfirm={async () => {
-                  setShowKillConfirm(false);
-                  const result = await execute({ action: "abort", agentId: selectedAgent.id });
-                  if (result.success) {
-                    addToast("success", "Session killed", result.message);
-                  } else {
-                    addToast("error", "Failed", result.error || "Could not kill session");
-                  }
-                }}
-                onCancel={() => setShowKillConfirm(false)}
-              />
+                {/* Command Input */}
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                    Command
+                  </h3>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={commandInput}
+                      onChange={(e) => setCommandInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSendCommand();
+                      }}
+                      placeholder="Type a command..."
+                      className="flex-1 rounded-lg border border-[#2a2a2a] bg-[#141414] px-3 py-2 font-mono text-xs text-[#e5e5e5] placeholder-[#525252] focus:border-[#DF4F15] focus:outline-none"
+                    />
+                    <button
+                      onClick={handleSendCommand}
+                      disabled={!commandInput.trim()}
+                      className="rounded-lg bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5] px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M14 2L7 9M14 2l-5 12-2-5-5-2 12-5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <ConfirmDialog
+                  isOpen={showKillConfirm}
+                  title="Kill Session"
+                  message={`Abort the current session for ${selectedAgent.name}?`}
+                  onConfirm={async () => {
+                    setShowKillConfirm(false);
+                    const result = await execute({ action: "abort", agentId: selectedAgent.id });
+                    if (result.success) {
+                      addToast("success", "Session killed", result.message);
+                    } else {
+                      addToast("error", "Failed", result.error || "Could not kill session");
+                    }
+                  }}
+                  onCancel={() => setShowKillConfirm(false)}
+                />
+              </div>
             </motion.div>
           </>
         )}

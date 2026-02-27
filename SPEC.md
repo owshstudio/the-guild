@@ -4,7 +4,7 @@
 
 A Next.js 16 web app for managing AI agents running on OpenClaw. Dark theme, premium feel. Two layers: functional management pages + a pixel art virtual office where agents are visualized as animated characters.
 
-**Current state**: Feature-complete through Phase 5. 146 source files, 14 page routes, 19 API routes. Build passes.
+**Current state**: Feature-complete through Phase 5 + "Make It Real" dynamic agent refactor. 146 source files, 14 page routes, 19 API routes. All agents discovered dynamically from `~/.openclaw/agents/` — no hardcoded agent list. Build passes.
 
 ## Stack
 
@@ -83,9 +83,10 @@ Bottom: Settings link.
 ### /comms
 
 - Cross-agent communication timeline parsed from session data
-- Vertical timeline with alternating left/right by sender
+- Scans all agent session directories for cross-agent mentions
+- Vertical timeline with alternating left/right by message index
 - Message cards: avatar, name, time, channel badge, content preview, delivery status
-- Filter bar: sender/receiver dropdowns, channel filter
+- Filter bar: dynamic sender/receiver dropdowns from live agent list, channel filter
 - Channels: whatsapp-group, git-sync, session, alert-file, delivery-queue
 
 ### /hitl
@@ -149,18 +150,22 @@ Budget alert banner appears at page top when spend exceeds configured thresholds
 - Sprite size: 16x24 pixels scaled up (chunky pixel look)
 - Office tile size: 48x48 pixels on canvas
 - Color palette: limited per sprite for authentic pixel feel, palette-swappable
-- NYX sprite: dark/purple theme (goddess of night)
-- HEMERA sprite: warm/golden theme (goddess of day)
-- 4 hair templates: long, short, puffy, spiky
+- **Known sprites**: NYX (dark/purple, long hair) and HEMERA (warm/golden, puffy hair) have hand-drawn pixel templates
+- **Dynamic agents**: any new agent gets a palette-generated sprite from its agent color using `generatePalette()`
+- Palette lookup: `PALETTES[agentId]` for known agents, `generatePalette(agent.color)` for dynamic ones
+- 4 hair templates: long, short, puffy, spiky (selectable in character creator)
 - Office palette: dark wood floors, warm lighting, cozy but techy
 - Canvas is responsive, centered on the page
+- Desk assignments: `"main"` agent gets desk 1; additional agents fill remaining desks or stand on open floor
 
 ## API Architecture
 
 All routes under `/api/gateway/`. Response format: `{ data, source: "live" | "mock" }`.
 
-- **Live mode**: reads from OpenClaw filesystem (`~/.openclaw/agents/`, `~/.openclaw/cron/`, `~/.openclaw/workspace/`)
-- **Mock mode**: returns data from `src/lib/mock-data.ts`
+- **Live mode**: reads from OpenClaw filesystem (`~/.openclaw/agents/`, `~/.openclaw/cron/`, `~/.openclaw/workspace/`). Detected via `hasOpenClawInstallation()` which checks for `openclaw.json`.
+- **Mock mode**: returns generic demo data from `src/lib/mock-data.ts` (single "Demo Agent"). Only shown when OpenClaw is not installed — never when installed but empty.
+- **Dynamic agent discovery**: `agent-builder.ts` scans `~/.openclaw/agents/` subdirectories, reads identity/soul/tools per agent, generates deterministic colors
+- **Configurable**: `OPENCLAW_DIR` env var for non-standard install paths, `GATEWAY_PORT` for port override
 - **WebSocket proxy**: dispatch and actions use server-side WS to gateway (auth token stays server-side)
 - **Polling**: client hooks use `setInterval` (3s-60s depending on feature urgency)
 
@@ -231,8 +236,19 @@ src/
   lib/
     data/                               # 17 React hooks (polling-based)
     gateway/                            # Server-side readers, parsers, writers
+      agent-builder.ts                  # Dynamic agent discovery from ~/.openclaw/agents/
+      filesystem.ts                     # Low-level filesystem readers (sessions, identity, tools)
+      config.ts                         # OpenClaw config + OPENCLAW_DIR/GATEWAY_PORT env vars
+      detect.ts                         # hasOpenClawInstallation() check
+      session-parser.ts                 # JSONL session parser
+      usage-aggregator.ts              # Per-agent daily token aggregation
+      activity-builder.ts              # Activity feed from sessions (all agents)
+      cost-calculator.ts               # Per-agent cost estimation
+      comms-builder.ts                 # Cross-agent communication scanner (all agents)
+      hitl-manager.ts                  # HITL queue + pattern scanner (all agents)
+      teams-manager.ts                 # Team CRUD (JSON file storage)
     types.ts                            # ~350 lines of shared TypeScript types
-    mock-data.ts                        # Mock data for all features
+    mock-data.ts                        # Generic demo data (single "Demo Agent")
     constants.ts                        # Colors, config
 ```
 
@@ -247,3 +263,4 @@ src/
 
 - **v0.1 (Phases 1-3)**: Core shell, pixel office (single room), gateway integration, sprite polish
 - **v0.2 (Phases 4-5)**: Toast system, sessions, dispatch, cron, webhooks, multi-room office, character creator, teams, comms, HITL, budget, chains
+- **v0.3 (Make It Real)**: Dynamic N-agent discovery, removed all hardcoded NYX/HEMERA references, env configuration (`OPENCLAW_DIR`, `GATEWAY_PORT`), mock/live detection, README + `.env.example`, generic demo data fallback

@@ -3,18 +3,7 @@ import path from "path";
 import { getConfig } from "./config";
 import type { Team } from "@/lib/types";
 
-const DEFAULT_TEAMS: Team[] = [
-  {
-    id: "ops",
-    name: "Operations",
-    description: "Core operations team",
-    color: "#7c3aed",
-    leadAgentId: "nyx",
-    memberAgentIds: ["nyx", "hemera"],
-    createdAt: "2026-02-26T00:00:00Z",
-    icon: "shield",
-  },
-];
+const DEFAULT_TEAMS: Team[] = [];
 
 async function getTeamsPath(): Promise<string> {
   const config = await getConfig();

@@ -1,37 +1,34 @@
 import type { AgentUsageDay } from "@/lib/types";
-import { listSessions } from "./filesystem";
+import { listSessions, listAgentDirs } from "./filesystem";
 import { parseSession } from "./session-parser";
 
 export async function aggregateUsage(): Promise<AgentUsageDay[]> {
-  const sessions = await listSessions();
-  const dayMap = new Map<string, { nyx: number; hemera: number }>();
+  const agentDirs = await listAgentDirs();
+  const dayMap = new Map<string, Record<string, number>>();
 
-  // Parse recent sessions (limit to last 20 to avoid reading too many large files)
-  const recent = sessions.slice(0, 20);
+  for (const agentId of agentDirs) {
+    const sessions = await listSessions(agentId);
+    const recent = sessions.slice(0, 20);
 
-  for (const meta of recent) {
-    try {
-      const parsed = await parseSession(meta.filepath, meta.id);
-      if (!parsed.startTime) continue;
+    for (const meta of recent) {
+      try {
+        const parsed = await parseSession(meta.filepath, meta.id);
+        if (!parsed.startTime) continue;
 
-      const date = new Date(parsed.startTime);
-      const dateKey = formatDateKey(date);
+        const date = new Date(parsed.startTime);
+        const dateKey = formatDateKey(date);
 
-      const existing = dayMap.get(dateKey) || { nyx: 0, hemera: 0 };
-      existing.nyx += parsed.totalTokens;
-      dayMap.set(dateKey, existing);
-    } catch {
-      // Skip on parse error
+        const existing = dayMap.get(dateKey) || {};
+        existing[agentId] = (existing[agentId] || 0) + parsed.totalTokens;
+        dayMap.set(dateKey, existing);
+      } catch {
+        // Skip on parse error
+      }
     }
   }
 
-  // Convert to sorted array
-  const entries = Array.from(dayMap.entries())
-    .map(([date, usage]) => ({
-      date,
-      nyx: usage.nyx,
-      hemera: usage.hemera,
-    }))
+  const entries: AgentUsageDay[] = Array.from(dayMap.entries())
+    .map(([date, usage]) => ({ date, ...usage }))
     .sort((a, b) => {
       const dateA = parseDateKey(a.date);
       const dateB = parseDateKey(b.date);

@@ -9,7 +9,19 @@ export interface OpenClawConfig {
   gatewayPort: number;
 }
 
-const OPENCLAW_DIR = path.join(homedir(), ".openclaw");
+function resolveOpenClawDir(): string {
+  const envDir = process.env.OPENCLAW_DIR;
+  if (envDir) {
+    // Expand ~ to homedir
+    if (envDir.startsWith("~")) {
+      return path.join(homedir(), envDir.slice(1));
+    }
+    return envDir;
+  }
+  return path.join(homedir(), ".openclaw");
+}
+
+const OPENCLAW_DIR = resolveOpenClawDir();
 
 export function getOpenClawDir(): string {
   return OPENCLAW_DIR;
@@ -26,7 +38,10 @@ export async function getConfig(): Promise<OpenClawConfig> {
     const workspacePath =
       config?.agents?.defaults?.workspace ||
       path.join(OPENCLAW_DIR, "workspace");
-    const gatewayPort = config?.gateway?.port || 18789;
+    const gatewayPort =
+      parseInt(process.env.GATEWAY_PORT || "", 10) ||
+      config?.gateway?.port ||
+      18789;
 
     return {
       workspacePath,
@@ -35,19 +50,20 @@ export async function getConfig(): Promise<OpenClawConfig> {
       gatewayPort,
     };
   } catch {
+    const gatewayPort =
+      parseInt(process.env.GATEWAY_PORT || "", 10) || 18789;
+
     return {
       workspacePath: path.join(OPENCLAW_DIR, "workspace"),
       agentsPath: path.join(OPENCLAW_DIR, "agents"),
       cronPath: path.join(OPENCLAW_DIR, "cron"),
-      gatewayPort: 18789,
+      gatewayPort,
     };
   }
 }
 
 export async function getSanitizedConfig(): Promise<
-  Omit<OpenClawConfig, "agentsPath" | "cronPath"> & {
-    hasConfig: boolean;
-  }
+  Omit<OpenClawConfig, "agentsPath" | "cronPath"> & { hasConfig: boolean }
 > {
   const config = await getConfig();
   return {

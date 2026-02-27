@@ -51,8 +51,17 @@ export interface Task {
 
 export interface AgentUsageDay {
   date: string;
-  nyx: number;
-  hemera: number;
+  [agentId: string]: string | number;
+}
+
+// Agent command interface
+export interface CommandEntry {
+  id: string;
+  agentId: string;
+  command: string;
+  response?: string;
+  timestamp: string;
+  status: "pending" | "completed" | "error";
 }
 
 // Toast system
@@ -300,12 +309,7 @@ export type CommChannel =
   | "alert-file"
   | "delivery-queue";
 
-export type CommDirection =
-  | "nyx-to-hemera"
-  | "hemera-to-nyx"
-  | "nyx-to-noah"
-  | "hemera-to-noah"
-  | "system";
+export type CommDirection = string;
 
 export interface CommMessage {
   id: string;

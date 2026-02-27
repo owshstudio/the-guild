@@ -45,10 +45,11 @@ interface ToastContainerProps {
 }
 
 export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
+  const visible = toasts.slice(-3);
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+    <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
       <AnimatePresence mode="popLayout">
-        {toasts.map((toast) => (
+        {visible.map((toast) => (
           <motion.div
             key={toast.id}
             initial={{ opacity: 0, y: 20, scale: 0.95 }}

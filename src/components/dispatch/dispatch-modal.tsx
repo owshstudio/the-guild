@@ -15,7 +15,7 @@ interface DispatchModalProps {
 export function DispatchModal({ isOpen, onClose, targetAgentId }: DispatchModalProps) {
   const { agents } = useAgents();
   const { addToast } = useToasts();
-  const [selectedAgentId, setSelectedAgentId] = useState<string>(targetAgentId || "nyx");
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(targetAgentId || agents[0]?.id || "main");
   const [message, setMessage] = useState("");
   const [isNewSession, setIsNewSession] = useState(true);
   const [isDispatching, setIsDispatching] = useState(false);

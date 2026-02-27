@@ -62,7 +62,7 @@ export default function PixelOfficeCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const roomManagerRef = useRef(new RoomManager());
   const agentsRef = useRef<AgentEntity[]>(
-    createAgentEntities(roomManagerRef.current.getCurrentTilemap())
+    createAgentEntities(roomManagerRef.current.getCurrentTilemap(), agentsProp)
   );
   const hoveredRef = useRef<string | null>(null);
   const lastTimeRef = useRef(performance.now());
@@ -78,6 +78,37 @@ export default function PixelOfficeCanvas({
       rm.setAgentRoom(agent.id, agent.currentRoom);
     }
   }, []);
+
+  // Sync live agents: add new agents, update existing status
+  useEffect(() => {
+    if (!agentsProp || agentsProp.length === 0) return;
+    const current = agentsRef.current;
+    const tilemap = roomManagerRef.current.getCurrentTilemap();
+
+    for (const liveAgent of agentsProp.slice(0, 6)) {
+      const existing = current.find((a) => a.id === liveAgent.id);
+      if (existing) {
+        // Update status
+        existing.status = liveAgent.status;
+        existing.name = liveAgent.name;
+      } else if (current.length < 6) {
+        // Add new agent entity
+        const newEntities = createAgentEntities(tilemap, [liveAgent]);
+        if (newEntities.length > 0) {
+          const entity = newEntities[0];
+          current.push(entity);
+          roomManagerRef.current.setAgentRoom(entity.id, entity.currentRoom);
+        }
+      }
+    }
+
+    // Mark agents not in liveAgents as stopped
+    for (const entity of current) {
+      if (!agentsProp.find((a) => a.id === entity.id)) {
+        entity.status = "stopped";
+      }
+    }
+  }, [agentsProp]);
 
   const drawRoomTabs = useCallback(
     (ctx: CanvasRenderingContext2D) => {

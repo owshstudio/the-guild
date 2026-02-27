@@ -2,25 +2,40 @@ import { readFile, readdir, stat } from "fs/promises";
 import path from "path";
 import type { CommChannel, CommDirection, CommMessage } from "@/lib/types";
 import { getConfig } from "./config";
+import { listAgentDirs, readIdentity } from "./filesystem";
 
-const AGENT_NAMES = ["nyx", "hemera", "noah"] as const;
+interface AgentInfo {
+  name: string;
+  emoji: string;
+  color: string;
+}
 
-const AGENT_META: Record<string, { name: string; emoji: string; color: string }> = {
-  nyx: { name: "NYX", emoji: "\u{1F703}", color: "#7c3aed" },
-  hemera: { name: "HEMERA", emoji: "\u2600\uFE0F", color: "#d97706" },
-  noah: { name: "NOAH", emoji: "\u{1F468}\u200D\u{1F4BB}", color: "#3b82f6" },
-};
+async function getAgentMeta(): Promise<Record<string, AgentInfo>> {
+  const meta: Record<string, AgentInfo> = {
+    noah: { name: "NOAH", emoji: "\u{1F468}\u200D\u{1F4BB}", color: "#3b82f6" },
+  };
+
+  try {
+    const dirs = await listAgentDirs();
+    for (const agentId of dirs) {
+      let name = agentId.toUpperCase();
+      let emoji = "\u{1F916}";
+      try {
+        const identity = await readIdentity(agentId === "main" ? undefined : agentId);
+        if (identity) {
+          if (identity.name) name = identity.name;
+          if (identity.emoji) emoji = identity.emoji;
+        }
+      } catch { /* use defaults */ }
+      meta[agentId] = { name, emoji, color: "#7c3aed" };
+    }
+  } catch { /* no agents */ }
+
+  return meta;
+}
 
 function resolveDirection(from: string, to: string): CommDirection {
-  const key = `${from}-to-${to}`;
-  const valid: CommDirection[] = [
-    "nyx-to-hemera",
-    "hemera-to-nyx",
-    "nyx-to-noah",
-    "hemera-to-noah",
-    "system",
-  ];
-  return (valid.find((d) => d === key) as CommDirection) || "system";
+  return `${from}-to-${to}`;
 }
 
 function truncate(text: string, max: number): string {
@@ -41,10 +56,14 @@ export async function buildComms(options?: BuildCommsOptions): Promise<CommMessa
 
   try {
     const config = await getConfig();
+    const agentDirs = await listAgentDirs();
+    const agentMeta = await getAgentMeta();
 
     // 1. Scan session files for cross-agent mentions
-    await scanSessions(config.agentsPath, messages, idCounter);
-    idCounter = messages.length;
+    for (const agentId of agentDirs) {
+      await scanAgentSessions(config.agentsPath, agentId, agentDirs, agentMeta, messages, idCounter);
+      idCounter = messages.length;
+    }
 
     // 2. Check delivery queue
     const deliveryQueuePath = path.join(
@@ -54,8 +73,11 @@ export async function buildComms(options?: BuildCommsOptions): Promise<CommMessa
     await scanDeliveryQueue(deliveryQueuePath, messages, idCounter);
     idCounter = messages.length;
 
-    // 3. Check workspace alert files
-    await scanAlertFiles(config.workspacePath, messages, idCounter);
+    // 3. Check workspace alert files for all agents
+    for (const agentId of agentDirs) {
+      await scanAlertFiles(config.workspacePath, agentId, messages, idCounter);
+      idCounter = messages.length;
+    }
   } catch {
     // Directories may not exist — fall through to mock
   }
@@ -85,15 +107,18 @@ export async function buildComms(options?: BuildCommsOptions): Promise<CommMessa
   return filtered.slice(0, limit);
 }
 
-async function scanSessions(
+async function scanAgentSessions(
   agentsPath: string,
+  agentId: string,
+  allAgentIds: string[],
+  agentMeta: Record<string, AgentInfo>,
   messages: CommMessage[],
   startId: number
 ): Promise<void> {
   let idCounter = startId;
 
   try {
-    const sessionsDir = path.join(agentsPath, "main", "sessions");
+    const sessionsDir = path.join(agentsPath, agentId, "sessions");
     const dirStat = await stat(sessionsDir);
     if (!dirStat.isDirectory()) return;
 
@@ -126,21 +151,23 @@ async function scanSessions(
 
             if (!content) continue;
 
-            // Check for mentions of other agents
+            // Check for mentions of other agents or noah
             const contentLower = content.toLowerCase();
-            for (const targetAgent of AGENT_NAMES) {
+            const targets = [...allAgentIds.filter((id) => id !== agentId), "noah"];
+            for (const targetAgent of targets) {
+              const targetName = agentMeta[targetAgent]?.name?.toLowerCase() || targetAgent;
               if (
-                targetAgent !== "nyx" &&
-                contentLower.includes(targetAgent)
+                contentLower.includes(targetAgent) ||
+                contentLower.includes(targetName)
               ) {
                 messages.push({
                   id: `comm-session-${idCounter++}`,
                   timestamp:
                     entry.timestamp || new Date().toISOString(),
-                  fromAgentId: "nyx",
+                  fromAgentId: agentId,
                   toAgentId: targetAgent,
                   channel: "session",
-                  direction: resolveDirection("nyx", targetAgent),
+                  direction: resolveDirection(agentId, targetAgent),
                   content: content.slice(0, 500),
                   contentPreview: truncate(content, 200),
                   sessionId,
@@ -180,13 +207,16 @@ async function scanDeliveryQueue(
         const raw = await readFile(filepath, "utf-8");
         const entry = JSON.parse(raw);
 
+        const from = entry.from || "main";
+        const to = entry.to || "noah";
+
         messages.push({
           id: `comm-queue-${idCounter++}`,
           timestamp: entry.timestamp || entry.createdAt || new Date().toISOString(),
-          fromAgentId: entry.from || "nyx",
-          toAgentId: entry.to || "hemera",
+          fromAgentId: from,
+          toAgentId: to,
           channel: "delivery-queue",
-          direction: resolveDirection(entry.from || "nyx", entry.to || "hemera"),
+          direction: resolveDirection(from, to),
           content: entry.message || entry.content || "",
           contentPreview: truncate(
             entry.message || entry.content || "",
@@ -205,17 +235,18 @@ async function scanDeliveryQueue(
 
 async function scanAlertFiles(
   workspacePath: string,
+  agentId: string,
   messages: CommMessage[],
   startId: number
 ): Promise<void> {
   let idCounter = startId;
 
   try {
-    const hemeraDir = path.join(workspacePath, "hemera");
-    const dirStat = await stat(hemeraDir);
+    const agentDir = path.join(workspacePath, agentId);
+    const dirStat = await stat(agentDir);
     if (!dirStat.isDirectory()) return;
 
-    const files = await readdir(hemeraDir);
+    const files = await readdir(agentDir);
     const alertFiles = files.filter(
       (f) =>
         f.toLowerCase().includes("alert") || f.toLowerCase().includes("status")
@@ -223,17 +254,17 @@ async function scanAlertFiles(
 
     for (const file of alertFiles) {
       try {
-        const filepath = path.join(hemeraDir, file);
+        const filepath = path.join(agentDir, file);
         const fileStat = await stat(filepath);
         const raw = await readFile(filepath, "utf-8");
 
         messages.push({
           id: `comm-alert-${idCounter++}`,
           timestamp: fileStat.mtime.toISOString(),
-          fromAgentId: "hemera",
-          toAgentId: "nyx",
+          fromAgentId: agentId,
+          toAgentId: "noah",
           channel: "alert-file",
-          direction: "hemera-to-nyx",
+          direction: resolveDirection(agentId, "noah"),
           content: raw.slice(0, 500),
           contentPreview: truncate(raw, 200),
           deliveryStatus: "delivered",
@@ -243,7 +274,7 @@ async function scanAlertFiles(
       }
     }
   } catch {
-    // Hemera workspace doesn't exist
+    // Agent workspace doesn't exist
   }
 }
 
@@ -253,95 +284,16 @@ export function getMockComms(): CommMessage[] {
     {
       id: "mock-1",
       timestamp: new Date(now - 30 * 60 * 1000).toISOString(),
-      fromAgentId: "nyx",
-      toAgentId: "hemera",
+      fromAgentId: "demo",
+      toAgentId: "noah",
       channel: "session",
-      direction: "nyx-to-hemera",
+      direction: "demo-to-noah",
       content:
-        "HEMERA, I've updated the outreach queue with 15 new prospects from the LinkedIn scrape. Priority tier: high. Please begin processing batch 3 when you come online.",
+        "Task batch complete. 15 items processed successfully. Awaiting further instructions.",
       contentPreview:
-        "HEMERA, I've updated the outreach queue with 15 new prospects from the LinkedIn scrape. Priority tier: high. Please begin processing batch 3...",
-      sessionId: "abc-123",
+        "Task batch complete. 15 items processed successfully. Awaiting further instructions.",
+      sessionId: "demo-session",
       deliveryStatus: "delivered",
-    },
-    {
-      id: "mock-2",
-      timestamp: new Date(now - 55 * 60 * 1000).toISOString(),
-      fromAgentId: "hemera",
-      toAgentId: "nyx",
-      channel: "delivery-queue",
-      direction: "hemera-to-nyx",
-      content:
-        "Batch 2 complete. 9/11 messages delivered successfully. 2 failures: account restricted. Attaching delivery report.",
-      contentPreview:
-        "Batch 2 complete. 9/11 messages delivered successfully. 2 failures: account restricted. Attaching delivery report.",
-      deliveryStatus: "delivered",
-    },
-    {
-      id: "mock-3",
-      timestamp: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
-      fromAgentId: "nyx",
-      toAgentId: "noah",
-      channel: "whatsapp-group",
-      direction: "nyx-to-noah",
-      content:
-        "Morning brief: The Guild dashboard is live. HEMERA gateway initialized on LOKI. 3 new client inquiries in the pipeline. Waiting on your go for batch 3 outreach.",
-      contentPreview:
-        "Morning brief: The Guild dashboard is live. HEMERA gateway initialized on LOKI. 3 new client inquiries in the pipeline...",
-      deliveryStatus: "delivered",
-    },
-    {
-      id: "mock-4",
-      timestamp: new Date(now - 3 * 60 * 60 * 1000).toISOString(),
-      fromAgentId: "hemera",
-      toAgentId: "noah",
-      channel: "alert-file",
-      direction: "hemera-to-noah",
-      content:
-        "ALERT: Facebook Messenger rate limit approaching. 8/10 daily DM slots used. Recommend pausing outreach until tomorrow or switching to backup account.",
-      contentPreview:
-        "ALERT: Facebook Messenger rate limit approaching. 8/10 daily DM slots used. Recommend pausing outreach until tomorrow...",
-      deliveryStatus: "delivered",
-    },
-    {
-      id: "mock-5",
-      timestamp: new Date(now - 4 * 60 * 60 * 1000).toISOString(),
-      fromAgentId: "nyx",
-      toAgentId: "hemera",
-      channel: "git-sync",
-      direction: "nyx-to-hemera",
-      content:
-        "Pushed updated prospect list to shared repo. 105 entries total. Schema: name, company, FB profile URL, tier, status. Pull when ready.",
-      contentPreview:
-        "Pushed updated prospect list to shared repo. 105 entries total. Schema: name, company, FB profile URL, tier, status...",
-      deliveryStatus: "delivered",
-    },
-    {
-      id: "mock-6",
-      timestamp: new Date(now - 5 * 60 * 60 * 1000).toISOString(),
-      fromAgentId: "hemera",
-      toAgentId: "nyx",
-      channel: "session",
-      direction: "hemera-to-nyx",
-      content:
-        "Acknowledged. Pulling prospect list now. Will begin batch 2 processing. ETA: 45 minutes for 11 messages with 3-5 min spacing.",
-      contentPreview:
-        "Acknowledged. Pulling prospect list now. Will begin batch 2 processing. ETA: 45 minutes for 11 messages...",
-      sessionId: "def-456",
-      deliveryStatus: "delivered",
-    },
-    {
-      id: "mock-7",
-      timestamp: new Date(now - 6 * 60 * 60 * 1000).toISOString(),
-      fromAgentId: "nyx",
-      toAgentId: "noah",
-      channel: "whatsapp-group",
-      direction: "nyx-to-noah",
-      content:
-        "HEMERA is now online and processing. I'll monitor the delivery queue and flag any issues. Current session cost: $0.42.",
-      contentPreview:
-        "HEMERA is now online and processing. I'll monitor the delivery queue and flag any issues. Current session cost: $0.42.",
-      deliveryStatus: "pending",
     },
   ];
 }

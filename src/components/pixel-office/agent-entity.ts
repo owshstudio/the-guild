@@ -1,10 +1,11 @@
-import { AgentStatus, RoomId } from "@/lib/types";
-import { getCharacterSprites, renderSprite, SpriteData } from "./sprites";
+import { Agent, AgentStatus, RoomId } from "@/lib/types";
+import { getCharacterSprites, renderSprite, SpriteData, PALETTES } from "./sprites";
 import { getStatusColor } from "./office-map";
 import { TileMap } from "./tilemap";
 import { PathNode, findPath } from "./pathfinding";
 import {
   deskAssignments,
+  DeskAssignment,
   COFFEE_MACHINE,
   WANDER_BOUNDS,
 } from "./office-layouts";
@@ -50,27 +51,78 @@ function randomRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-export function createAgentEntities(tilemap: TileMap): AgentEntity[] {
-  return deskAssignments.map((desk) => {
-    const pixel = tilemap.tileToPixel(desk.chairCol, desk.chairRow);
+// Extra desk positions for dynamic agents beyond the configured two
+const EXTRA_POSITIONS: { col: number; row: number }[] = [
+  { col: 8, row: 4 },  // 3rd desk chair
+  { col: 3, row: 5 },  // open floor
+  { col: 6, row: 5 },  // open floor
+  { col: 10, row: 5 }, // open floor
+];
+
+const MAX_OFFICE_AGENTS = 6;
+
+export function createAgentEntities(
+  tilemap: TileMap,
+  liveAgents?: Agent[]
+): AgentEntity[] {
+  // If no live agents provided, use desk assignments (legacy)
+  if (!liveAgents || liveAgents.length === 0) {
+    return deskAssignments.map((desk) => {
+      const pixel = tilemap.tileToPixel(desk.chairCol, desk.chairRow);
+      return {
+        id: desk.agentId,
+        name: desk.agentId.toUpperCase(),
+        paletteId: desk.agentId,
+        status: "idle" as AgentStatus,
+        x: pixel.x,
+        y: pixel.y,
+        tileCol: desk.chairCol,
+        tileRow: desk.chairRow,
+        path: [],
+        pathIndex: 0,
+        moveProgress: 0,
+        moveSpeed: 3,
+        frame: 0,
+        frameTimer: 0,
+        state: "idle" as const,
+        facing: "down" as const,
+        behavior: "sitting-idle" as BehaviorState,
+        behaviorTimer: randomRange(5, 12),
+        currentRoom: "main-office" as RoomId,
+      };
+    });
+  }
+
+  // Dynamic: map live agents to positions (capped at MAX_OFFICE_AGENTS)
+  const capped = liveAgents.slice(0, MAX_OFFICE_AGENTS);
+  return capped.map((agent, i) => {
+    const desk = deskAssignments.find((d) => d.agentId === agent.id);
+    const pos = desk
+      ? { col: desk.chairCol, row: desk.chairRow }
+      : EXTRA_POSITIONS[i - deskAssignments.length] || EXTRA_POSITIONS[0];
+    const pixel = tilemap.tileToPixel(pos.col, pos.row);
+
+    // Use known palette ID if available, otherwise agent color for generated palette
+    const paletteId = PALETTES[agent.id] ? agent.id : agent.color;
+
     return {
-      id: desk.agentId,
-      name: desk.agentId.toUpperCase(),
-      paletteId: desk.agentId,
-      status: (desk.agentId === "nyx" ? "active" : "idle") as AgentStatus,
+      id: agent.id,
+      name: agent.name,
+      paletteId,
+      status: agent.status,
       x: pixel.x,
       y: pixel.y,
-      tileCol: desk.chairCol,
-      tileRow: desk.chairRow,
+      tileCol: pos.col,
+      tileRow: pos.row,
       path: [],
       pathIndex: 0,
       moveProgress: 0,
-      moveSpeed: 3, // tiles per second
+      moveSpeed: 3,
       frame: 0,
       frameTimer: 0,
-      state: desk.agentId === "nyx" ? "typing" : "idle",
+      state: agent.status === "active" ? "typing" : "idle",
       facing: "down" as const,
-      behavior: desk.agentId === "nyx" ? "working" : "sitting-idle",
+      behavior: agent.status === "active" ? "working" : "sitting-idle",
       behaviorTimer: randomRange(5, 12),
       currentRoom: "main-office" as RoomId,
     };
@@ -367,6 +419,13 @@ export function drawAgent(
   agent: AgentEntity,
   scale: number
 ): void {
+  // Stopped agents render at reduced opacity
+  const isStopped = agent.status === "stopped";
+  if (isStopped) {
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+  }
+
   const sprites = getCharacterSprites(agent.paletteId);
 
   // Pick the right sprite frame
@@ -443,6 +502,10 @@ export function drawAgent(
   ctx.fill();
 
   ctx.textAlign = "left";
+
+  if (isStopped) {
+    ctx.restore();
+  }
 }
 
 export function isAgentHovered(

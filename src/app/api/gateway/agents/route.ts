@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { buildAgents } from "@/lib/gateway/agent-builder";
+import { hasOpenClawInstallation } from "@/lib/gateway/detect";
 import { agents as mockAgents } from "@/lib/mock-data";
 
 export async function GET() {
   try {
-    const agents = await buildAgents();
-    if (agents.length === 0) {
-      return NextResponse.json({ data: mockAgents, source: "mock", error: "No agents found" });
+    const installed = await hasOpenClawInstallation();
+    if (!installed) {
+      return NextResponse.json({ data: mockAgents, source: "mock" });
     }
+
+    const agents = await buildAgents();
     return NextResponse.json({ data: agents, source: "live" });
   } catch (error) {
     return NextResponse.json({

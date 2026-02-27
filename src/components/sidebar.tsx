@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useDataSource } from "@/lib/data/data-provider";
+import { AnimatePresence, motion } from "framer-motion";
 
 const navItems = [
   { href: "/guild", label: "Guild", icon: GuildIcon },
@@ -22,71 +24,120 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { dataSource } = useDataSource();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-60 flex-col border-r border-[#1f1f1f] bg-[#0c0c0c]">
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#DF4F15] via-[#F9425F] to-[#A326B5]">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <>
+      {/* Mobile top bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center gap-3 border-b border-[#1f1f1f] bg-[#0c0c0c] px-4 lg:hidden">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#a3a3a3] transition hover:bg-white/[0.05]"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#DF4F15] via-[#F9425F] to-[#A326B5]">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M8 1L2 5V11L8 15L14 11V5L8 1Z" fill="white" fillOpacity="0.9" />
             <path d="M8 1V8L14 5L8 1Z" fill="white" fillOpacity="0.7" />
             <path d="M8 8V15L14 11V5L8 8Z" fill="white" fillOpacity="0.5" />
           </svg>
         </div>
-        <span className="text-lg font-semibold tracking-tight text-white">
-          The Guild
-        </span>
+        <span className="text-sm font-semibold tracking-tight text-white">The Guild</span>
       </div>
 
-      {/* Nav */}
-      <nav className="mt-4 flex flex-1 flex-col gap-1 px-3 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-white/[0.08] text-white"
-                  : "text-[#737373] hover:bg-white/[0.04] hover:text-[#a3a3a3]"
-              }`}
-            >
-              <item.icon active={isActive} />
-              {item.label}
-              {isActive && (
-                <div className="ml-auto h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#DF4F15] to-[#F9425F]" />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Backdrop overlay (mobile) */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/60 lg:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Bottom section */}
-      <div className="border-t border-[#1f1f1f] px-3 py-4">
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#737373] transition-all hover:bg-white/[0.04] hover:text-[#a3a3a3]"
-        >
-          <SettingsIcon />
-          Settings
-        </Link>
-        <div className="mt-3 flex items-center gap-3 px-3">
-          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#DF4F15] to-[#A326B5]" />
-          <div>
-            <p className="text-xs font-medium text-[#d4d4d4]">Guild Admin</p>
-            <p className="text-[10px] text-[#525252]">v0.1.0</p>
-            <p
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: dataSource === "live" ? "#22c55e" : "#eab308" }}
-            >
-              {dataSource === "live" ? "LIVE" : "MOCK"}
-            </p>
+      {/* Sidebar */}
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-screen w-60 flex-col border-r border-[#1f1f1f] bg-[#0c0c0c] transition-transform duration-300 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
+      >
+        {/* Logo */}
+        <div className="flex h-16 items-center gap-3 px-6">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#DF4F15] via-[#F9425F] to-[#A326B5]">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1L2 5V11L8 15L14 11V5L8 1Z" fill="white" fillOpacity="0.9" />
+              <path d="M8 1V8L14 5L8 1Z" fill="white" fillOpacity="0.7" />
+              <path d="M8 8V15L14 11V5L8 8Z" fill="white" fillOpacity="0.5" />
+            </svg>
+          </div>
+          <span className="text-lg font-semibold tracking-tight text-white">
+            The Guild
+          </span>
+        </div>
+
+        {/* Nav */}
+        <nav className="mt-4 flex flex-1 flex-col gap-1 px-3 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-white/[0.08] text-white"
+                    : "text-[#737373] hover:bg-white/[0.04] hover:text-[#a3a3a3]"
+                }`}
+              >
+                <item.icon active={isActive} />
+                {item.label}
+                {isActive && (
+                  <div className="ml-auto h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#DF4F15] to-[#F9425F]" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom section */}
+        <div className="border-t border-[#1f1f1f] px-3 py-4">
+          <Link
+            href="/settings"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#737373] transition-all hover:bg-white/[0.04] hover:text-[#a3a3a3]"
+          >
+            <SettingsIcon />
+            Settings
+          </Link>
+          <div className="mt-3 flex items-center gap-3 px-3">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#DF4F15] to-[#A326B5]" />
+            <div>
+              <p className="text-xs font-medium text-[#d4d4d4]">Guild Admin</p>
+              <p className="text-[10px] text-[#525252]">v0.1.0</p>
+              <p
+                className="text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: dataSource === "live" ? "#22c55e" : "#eab308" }}
+              >
+                {dataSource === "live" ? "LIVE" : "MOCK"}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

@@ -110,8 +110,7 @@ const MAIN_OFFICE: RoomDefinition = {
   name: "Main Office",
   layout: MAIN_OFFICE_LAYOUT,
   deskAssignments: [
-    { agentId: "nyx", deskCol: 1, deskRow: 3, chairCol: 1, chairRow: 4 },
-    { agentId: "hemera", deskCol: 5, deskRow: 3, chairCol: 5, chairRow: 4 },
+    { agentId: "main", deskCol: 1, deskRow: 3, chairCol: 1, chairRow: 4 },
   ],
   coffeeMachine: { col: 12, row: 2 },
   wanderBounds: { minCol: 0, maxCol: 14, minRow: 2, maxRow: 9 },
@@ -137,8 +136,7 @@ const SERVER_ROOM: RoomDefinition = {
   name: "Server Room",
   layout: SERVER_ROOM_LAYOUT,
   deskAssignments: [
-    { agentId: "nyx", deskCol: 5, deskRow: 5, chairCol: 5, chairRow: 6 },
-    { agentId: "hemera", deskCol: 8, deskRow: 5, chairCol: 8, chairRow: 6 },
+    { agentId: "main", deskCol: 5, deskRow: 5, chairCol: 5, chairRow: 6 },
   ],
   wanderBounds: { minCol: 1, maxCol: 13, minRow: 2, maxRow: 9 },
   doors: {

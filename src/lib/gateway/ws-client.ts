@@ -29,7 +29,8 @@ export async function sendGatewayCommand(
 ): Promise<JsonRpcResponse> {
   const config = await getConfig();
   const token = await getAuthToken();
-  const url = `ws://localhost:${config.gatewayPort}`;
+  const host = process.env.OPENCLAW_GATEWAY_HOST || "localhost";
+  const url = `ws://${host}:${config.gatewayPort}`;
   const id = crypto.randomUUID();
 
   const message = JSON.stringify({

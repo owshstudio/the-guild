@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useEventSource } from "./use-event-source";
 
 interface SessionMeta {
   id: string;
@@ -14,6 +15,7 @@ export function useSessions() {
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const [isLive, setIsLive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -28,10 +30,27 @@ export function useSessions() {
     setIsLoading(false);
   }, []);
 
+  const resetPollTimer = useCallback(() => {
+    clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(fetchSessions, 30000);
+  }, [fetchSessions]);
+
+  // SSE: on session-change, refetch immediately
+  useEventSource(
+    "/api/gateway/events",
+    {
+      "session-change": () => {
+        fetchSessions();
+        resetPollTimer();
+      },
+    },
+    isLive
+  );
+
   useEffect(() => {
     fetchSessions();
-    const interval = setInterval(fetchSessions, 30000);
-    return () => clearInterval(interval);
+    intervalRef.current = setInterval(fetchSessions, 30000);
+    return () => clearInterval(intervalRef.current);
   }, [fetchSessions]);
 
   return { sessions, isLive, isLoading };

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { ActivityEntry } from "@/lib/types";
 import { activityFeed as mockActivity } from "@/lib/mock-data";
+import { useEventSource } from "./use-event-source";
 
 export function useActivity() {
   const [activity, setActivity] = useState<ActivityEntry[]>(mockActivity);
   const [isLive, setIsLive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchActivity = useCallback(async () => {
     try {
@@ -22,10 +24,27 @@ export function useActivity() {
     setIsLoading(false);
   }, []);
 
+  const resetPollTimer = useCallback(() => {
+    clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(fetchActivity, 20000);
+  }, [fetchActivity]);
+
+  // SSE: on agent-change, refetch activity immediately
+  useEventSource(
+    "/api/gateway/events",
+    {
+      "agent-change": () => {
+        fetchActivity();
+        resetPollTimer();
+      },
+    },
+    isLive
+  );
+
   useEffect(() => {
     fetchActivity();
-    const interval = setInterval(fetchActivity, 20000);
-    return () => clearInterval(interval);
+    intervalRef.current = setInterval(fetchActivity, 20000);
+    return () => clearInterval(intervalRef.current);
   }, [fetchActivity]);
 
   return { activity, isLive, isLoading };

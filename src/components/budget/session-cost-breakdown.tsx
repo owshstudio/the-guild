@@ -35,11 +35,7 @@ export function SessionCostBreakdown({ costs }: SessionCostBreakdownProps) {
               >
                 <span className="text-xs text-[#737373]">{entry.date}</span>
                 <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                    entry.agentId === "nyx"
-                      ? "bg-[#7c3aed]/20 text-[#a78bfa]"
-                      : "bg-[#d97706]/20 text-[#fbbf24]"
-                  }`}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase bg-[#7c3aed]/20 text-[#a78bfa]"
                 >
                   {entry.agentId}
                 </span>

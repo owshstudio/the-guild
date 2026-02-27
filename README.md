@@ -1,130 +1,151 @@
-# The Guild — Agent Management Dashboard
+# The Guild
 
-A premium dark-themed dashboard for managing AI agents running on OpenClaw. Features functional management pages alongside a pixel art virtual office where agents are visualized as animated characters.
+A local dashboard for monitoring and managing [OpenClaw](https://github.com/openclaw) AI agents. Reads directly from your `~/.openclaw/` filesystem — no cloud, no accounts, all local.
+
+## Prerequisites
+
+- **OpenClaw** installed and configured (`~/.openclaw/` directory exists)
+- **Node.js 20+**
+
+## Quick Start
+
+```bash
+git clone https://github.com/noahowsh/the-guild.git
+cd the-guild
+npm install
+cp .env.example .env    # optional — defaults work for standard installs
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENCLAW_DIR` | `~/.openclaw` | Path to OpenClaw data directory |
+| `GATEWAY_PORT` | Read from `openclaw.json`, fallback `18789` | OpenClaw gateway port (server-side) |
+| `NEXT_PUBLIC_GATEWAY_PORT` | `18789` | Gateway port for browser health checks |
+
+Copy `.env.example` to `.env` and uncomment any overrides you need.
+
+## Multi-Machine Setup
+
+The Guild reads directly from `~/.openclaw/` — run it on the machine where your agents live, then access the dashboard from any browser on your network.
+
+### Same Network (LAN)
+
+On the machine running OpenClaw agents:
+
+```bash
+npm run dev:lan
+```
+
+From any other device on the same network, open `http://<machine-ip>:3000`. The Settings page shows your LAN IP.
+
+### Tailscale (Remote Networks)
+
+If OpenClaw is configured with `tailscale.mode` in `openclaw.json`:
+
+1. Install [Tailscale](https://tailscale.com) on both machines
+2. Run `npm run dev:lan` on the agent machine
+3. Open `http://<tailscale-ip>:3000` from anywhere
+
+### SSH Tunnel
+
+Forward port 3000 from a remote machine:
+
+```bash
+ssh -L 3000:localhost:3000 user@agent-machine
+```
+
+Then open `http://localhost:3000` on your local machine.
+
+## How It Works
+
+The Guild discovers your agents **dynamically** by scanning `~/.openclaw/agents/`. Each subdirectory (e.g., `agents/main/`) becomes an agent in the dashboard. Works with 1 agent or N agents — no hardcoded agent list.
+
+**Agent discovery:**
+- Scans `~/.openclaw/agents/` for subdirectories (each = one agent)
+- Agent ID = directory name (e.g., `main`)
+- Display name, emoji, and role read from `IDENTITY.md` and `SOUL.md`
+- Skills parsed from `TOOLS.md` section headers
+- Status determined from most recent session modification time
+- Colors assigned deterministically from agent name (known agents like NYX/HEMERA get signature colors)
+
+**Data sources:**
+- `~/.openclaw/agents/{id}/sessions/*.jsonl` — session transcripts, token usage, tool calls
+- `~/.openclaw/workspace/IDENTITY.md` — primary agent (main) identity
+- `~/.openclaw/workspace/{id}/IDENTITY.md` — additional agent identities
+- `~/.openclaw/workspace/SOUL.md` — agent personality and role
+- `~/.openclaw/workspace/TOOLS.md` — agent skills and capabilities
+- `~/.openclaw/openclaw.json` — gateway port and workspace config
+- `~/.openclaw/cron/jobs.json` — scheduled tasks
+- `~/.openclaw/workspace/guild-*.json` — teams, HITL queue, chains (created by The Guild)
+
+All data stays local. The dashboard polls your filesystem and the OpenClaw gateway health endpoint — nothing leaves your machine.
+
+**If OpenClaw isn't installed**, the dashboard shows generic demo data so you can explore the UI. When installed but empty (no sessions yet), it shows real data (empty arrays) — no fake activity.
+
+## Pages
+
+| Route | Feature |
+|-------|---------|
+| `/guild` | Pixel art office — 4 rooms with animated agent sprites, minimap, A* pathfinding |
+| `/agents` | Agent roster with live status, team grouping, detail cards |
+| `/activity` | Reverse-chronological activity feed from real session data |
+| `/sessions` | Two-panel session viewer with message pagination and tool call expansion |
+| `/tasks` | Kanban board with columns per agent |
+| `/comms` | Cross-agent communication timeline (scans all agents for mentions) |
+| `/hitl` | Human-in-the-loop approval queue with browser notifications |
+| `/skills` | Per-agent skill/tool lists |
+| `/usage` | Token usage charts, cost tracking, budget management |
+| `/cron` | Cron job editor with schedule preview |
+| `/webhooks` | Webhook configurator with HMAC signing and delivery log |
+| `/chains` | Task chain builder with visual step editor and templates |
+| `/settings` | Dashboard settings and connection test |
 
 ## Stack
 
 - **Next.js 16** (App Router, Turbopack, TypeScript)
 - **React 19**
 - **Tailwind CSS 4**
-- **Framer Motion** (page transitions, UI animations, drag reordering)
+- **Framer Motion** (page transitions, animations)
 - **Recharts** (usage charts, cost visualizations)
 - **HTML5 Canvas** (pixel art office with A* pathfinding)
-
-## Quick Start
-
-```bash
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Project Stats
-
-- **146 source files** across 16 component directories
-- **14 page routes** + **19 API routes**
-- **5 runtime dependencies** (next, react, react-dom, framer-motion, recharts)
-
-## Pages
-
-| Route | Feature |
-|-------|---------|
-| `/guild` | Pixel art office — 4 rooms (Main, Break, Server, Meeting) with animated agents, minimap, room tabs |
-| `/agents` | Agent roster with team grouping, detail cards, quick actions |
-| `/activity` | Reverse-chronological activity feed with agent filtering |
-| `/sessions` | Two-panel live session viewer with message pagination and tool call expansion |
-| `/tasks` | Kanban board with columns per agent |
-| `/comms` | Cross-agent communication timeline parsed from sessions |
-| `/hitl` | Human-in-the-loop approval queue with browser notifications |
-| `/skills` | Per-agent skill/tool lists |
-| `/usage` | Token usage, cost tracking, and budget management (3 tabs) |
-| `/cron` | Cron job editor with schedule preview and enable/disable toggle |
-| `/webhooks` | Webhook configurator with HMAC signing, delivery log, and test firing |
-| `/chains` | Task chain builder with visual step editor, drag reordering, and templates |
-| `/settings` | Dashboard settings |
-
-## API Routes
-
-All API routes live under `/api/gateway/` and follow the `{ data, source: "live" | "mock" }` response pattern. They read from the OpenClaw filesystem (`~/.openclaw/`) when available, falling back to mock data.
-
-| Endpoint | Methods | Purpose |
-|----------|---------|---------|
-| `/api/gateway/health` | GET | Gateway connectivity check |
-| `/api/gateway/agents` | GET | Agent list with status |
-| `/api/gateway/sessions` | GET | Session list with metadata |
-| `/api/gateway/sessions/[id]` | GET | Single session with pagination |
-| `/api/gateway/activity` | GET | Activity feed entries |
-| `/api/gateway/config` | GET | Gateway configuration |
-| `/api/gateway/usage` | GET | Token usage aggregation |
-| `/api/gateway/dispatch` | POST | Send task to agent via WebSocket |
-| `/api/gateway/actions` | POST | Quick actions (abort, restart, change model) |
-| `/api/gateway/cron` | GET/POST/PUT/DELETE | Cron job CRUD |
-| `/api/gateway/webhooks` | GET/POST/PUT/DELETE | Webhook CRUD |
-| `/api/gateway/webhooks/test` | POST | Test fire a webhook |
-| `/api/gateway/teams` | GET/POST/PUT/DELETE | Team CRUD |
-| `/api/gateway/comms` | GET | Cross-agent communication log |
-| `/api/gateway/hitl` | GET/POST/PUT/DELETE | HITL queue CRUD |
-| `/api/gateway/hitl/scan` | POST | Scan sessions for human-input patterns |
-| `/api/gateway/costs` | GET | Cost aggregation by period/agent |
-| `/api/gateway/chains` | GET/POST/PUT/DELETE | Task chain CRUD |
-| `/api/gateway/chains/check` | POST | Advance chain execution |
-
-## Pixel Art Office
-
-The office is a tile-based 2D world rendered on HTML5 Canvas:
-
-- **4 rooms**: Main Office, Break Room, Server Room, Meeting Room (each 15x10 tiles)
-- **Furniture**: desks, chairs, coffee machine, plants, couch, vending machine, server racks, whiteboard, large table
-- **Agent characters**: 16x24 pixel sprites with idle, walking, sitting, and typing animations
-- **Pathfinding**: A* algorithm for agent movement between furniture and rooms
-- **Behaviors**: working at desk, coffee breaks, wandering, room transitions
-- **Character creator**: custom color palettes, 4 hair styles, outfit presets
-- **Edit mode**: drag-and-drop agents to reassign desks
-- **Minimap**: bottom-right overlay showing agent positions across all rooms
-- **Room tabs**: top-right overlay for switching rooms with fade transitions
-
-## Design
-
-- **Dark theme**: bg `#0a0a0a`, cards `#141414`, borders `#1f1f1f`, text `#e5e5e5`
-- **Accent gradient**: `#DF4F15` (orange) → `#F9425F` (magenta) → `#A326B5` (purple)
-- **Font**: Geist Sans + Geist Mono
-- **Animations**: Framer Motion for modals, toasts, page transitions
 
 ## Architecture
 
 ```
 src/
   app/                    # 14 page routes + 19 API routes
-  components/
-    actions/              # Quick action buttons, confirm dialogs
-    activity/             # Activity feed
-    agents/               # Agent cards, detail views
-    budget/               # Cost charts, budget config, alert banners
-    chains/               # Chain builder, step editor, templates
-    character-creator/    # Color pickers, sprite preview
-    comms/                # Communication timeline, filters
-    cron/                 # Cron job list, editor, schedule preview
-    dispatch/             # Cmd+K dispatch modal, agent selector
-    hitl/                 # HITL queue, actions, browser notifications
-    pixel-office/         # Canvas, sprites, rooms, pathfinding, furniture
-    sessions/             # Session viewer, message bubbles, tool blocks
-    tasks/                # Kanban board
-    teams/                # Team cards, editor, metrics
-    webhooks/             # Webhook list, modal, delivery log
+  components/             # 39 React components (22 custom + 17 UI primitives)
   lib/
+    gateway/              # Server-side: agent discovery, session parsing, cost/usage aggregation
+      agent-builder.ts    # Dynamic agent scanner (reads ~/.openclaw/agents/)
+      filesystem.ts       # Low-level filesystem readers (sessions, identity, soul, tools)
+      config.ts           # OpenClaw config + env var resolution
+      detect.ts           # hasOpenClawInstallation() for mock/live decision
+      session-parser.ts   # JSONL session parser (messages, tokens, costs)
+      usage-aggregator.ts # Per-agent daily token aggregation
+      activity-builder.ts # Activity feed from real session messages
+      cost-calculator.ts  # Per-agent cost estimation from session data
+      comms-builder.ts    # Cross-agent communication scanner
+      hitl-manager.ts     # HITL queue persistence + session pattern scanner
+      teams-manager.ts    # Team CRUD (JSON file storage)
     data/                 # React hooks (polling-based, 3s-60s intervals)
-    gateway/              # Server-side filesystem readers, parsers, writers
-    types.ts              # ~350 lines of shared TypeScript types
-    mock-data.ts          # Mock data for all features
+    types.ts              # Shared TypeScript types
+    mock-data.ts          # Generic demo data (shown when OpenClaw not installed)
 ```
 
-## Key Patterns
+**Key patterns:**
+- **Dynamic agent discovery**: no hardcoded agent list — agents found by scanning the filesystem
+- API routes return `{ data, source: "live" | "mock" }` — live when OpenClaw is found, mock otherwise
+- Polling hooks auto-refresh data at configurable intervals
+- Server-side WebSocket proxy for dispatch/actions (auth token never exposed to client)
+- All storage is filesystem-first — teams, HITL, chains stored as JSON in `~/.openclaw/workspace/`
+- Pixel art sprites: NYX and HEMERA have custom hand-drawn templates; dynamic agents get palette-generated sprites from their agent color
 
-- **Polling architecture**: all data hooks use `setInterval` (3s for live sessions, 10s for HITL, 15-60s for everything else)
-- **Live/mock fallback**: API routes try filesystem first, fall back to mock data
-- **Server-side WebSocket proxy**: dispatch/actions use WS to OpenClaw gateway — auth token never exposed to client
-- **Filesystem-first storage**: teams, HITL, chains stored as JSON in `~/.openclaw/workspace/`
-- **localStorage**: budget config, custom palettes, office desk assignments (user preferences)
-- **Toast notifications**: global context provider with auto-dismiss (4s default)
-- **Cmd+K shortcut**: opens dispatch modal from any page
+## License
+
+MIT

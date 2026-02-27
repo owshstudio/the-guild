@@ -9,35 +9,37 @@ export default function GuildPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
 
   return (
-    <div className="relative min-h-screen p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-white">The Guild</h1>
-        <p className="mt-1 text-sm text-[#737373]">
-          Your agents at work. Click an agent to view details.
-        </p>
-      </div>
+    <div className="relative min-h-screen flex flex-col">
+      {/* Office Canvas — FULL PAGE */}
+      <div className="flex-1 relative">
+        <PixelOfficeCanvas onAgentClick={setSelectedAgent} />
 
-      {/* Office Canvas */}
-      <div className="flex justify-center">
-        <div className="relative">
-          <PixelOfficeCanvas onAgentClick={setSelectedAgent} />
+        {/* Overlay header */}
+        <div className="absolute top-4 left-4 z-10">
+          <h1 className="text-xl font-bold text-white/80 tracking-wide font-mono">THE GUILD</h1>
+          <p className="text-[10px] text-white/30 font-mono mt-0.5">
+            CLICK AN AGENT TO INSPECT
+          </p>
+        </div>
 
-          {/* Legend */}
-          <div className="mt-4 flex items-center justify-center gap-6 text-xs text-[#525252]">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#22c55e]" />
-              Active
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#eab308]" />
-              Idle
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#ef4444]" />
-              Stopped
-            </span>
-          </div>
+        {/* Legend overlay */}
+        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-5 text-[10px] text-white/30 font-mono bg-black/40 rounded-lg px-3 py-2 backdrop-blur-sm">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+            ACTIVE
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#eab308]" />
+            IDLE
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
+            STOPPED
+          </span>
+          <span className="text-white/15">|</span>
+          <span>🐱 LOKI</span>
+          <span>🜃 NYX</span>
+          <span>☀️ HEMERA</span>
         </div>
       </div>
 

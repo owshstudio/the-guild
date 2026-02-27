@@ -151,7 +151,7 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
   }, []);
 
   return (
-    <div className="relative w-full flex justify-center">
+    <div className="relative w-full h-full min-h-[calc(100vh-4rem)]">
       <canvas
         ref={canvasRef}
         width={OFFICE.width}
@@ -159,10 +159,9 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
         onClick={handleClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="rounded-xl border border-[#1f1f1f] w-full"
+        className="w-full h-full object-cover"
         style={{
           imageRendering: "pixelated",
-          maxWidth: "1440px",
           background: "#08080c",
         }}
       />

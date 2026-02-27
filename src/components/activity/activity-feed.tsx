@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { activityFeed, agents } from "@/lib/mock-data";
+import { useActivity } from "@/lib/data/use-activity";
+import { useAgents } from "@/lib/data/use-agents";
 import ActivityItem from "./activity-item";
 
 export default function ActivityFeed() {
+  const { activity } = useActivity();
+  const { agents } = useAgents();
   const [filter, setFilter] = useState<string>("all");
 
   const filtered =
     filter === "all"
-      ? activityFeed
-      : activityFeed.filter((e) => e.agentId === filter);
+      ? activity
+      : activity.filter((e) => e.agentId === filter);
 
   return (
     <div>

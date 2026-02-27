@@ -1,0 +1,75 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import type { Team } from "@/lib/types";
+
+const DEFAULT_TEAMS: Team[] = [
+  {
+    id: "ops",
+    name: "Operations",
+    description: "Core operations team",
+    color: "#7c3aed",
+    leadAgentId: "nyx",
+    memberAgentIds: ["nyx", "hemera"],
+    createdAt: "2026-02-26T00:00:00Z",
+    icon: "shield",
+  },
+];
+
+export function useTeams() {
+  const [teams, setTeams] = useState<Team[]>(DEFAULT_TEAMS);
+  const [isLive, setIsLive] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchTeams = useCallback(async () => {
+    try {
+      const res = await fetch("/api/gateway/teams");
+      const json = await res.json();
+      setTeams(json.data || DEFAULT_TEAMS);
+      setIsLive(json.source === "live");
+    } catch {
+      setTeams(DEFAULT_TEAMS);
+      setIsLive(false);
+    }
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchTeams();
+    const interval = setInterval(fetchTeams, 30000);
+    return () => clearInterval(interval);
+  }, [fetchTeams]);
+
+  const createTeam = useCallback(
+    async (team: Omit<Team, "id" | "createdAt">) => {
+      const res = await fetch("/api/gateway/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(team),
+      });
+      const json = await res.json();
+      if (json.data) setTeams(json.data);
+    },
+    []
+  );
+
+  const updateTeam = useCallback(async (team: Team) => {
+    const res = await fetch("/api/gateway/teams", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(team),
+    });
+    const json = await res.json();
+    if (json.data) setTeams(json.data);
+  }, []);
+
+  const deleteTeam = useCallback(async (id: string) => {
+    const res = await fetch(`/api/gateway/teams?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
+    if (json.data) setTeams(json.data);
+  }, []);
+
+  return { teams, isLive, isLoading, createTeam, updateTeam, deleteTeam };
+}

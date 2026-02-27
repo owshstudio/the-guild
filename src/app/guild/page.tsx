@@ -2,17 +2,27 @@
 
 import { useState } from "react";
 import { Agent } from "@/lib/types";
+import { useAgents } from "@/lib/data/use-agents";
+import { useDispatchContext } from "@/components/dispatch/dispatch-provider";
+import { useActions } from "@/lib/data/use-actions";
+import { useToasts } from "@/components/toast-provider";
+import { ConfirmDialog } from "@/components/actions/confirm-dialog";
 import PixelOfficeCanvas from "@/components/pixel-office/canvas";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function GuildPage() {
+  const { agents } = useAgents();
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const { openDispatch } = useDispatchContext();
+  const { execute, isExecuting } = useActions();
+  const { addToast } = useToasts();
+  const [showKillConfirm, setShowKillConfirm] = useState(false);
 
   return (
     <div className="relative min-h-screen flex flex-col">
       {/* Office Canvas — FULL PAGE */}
       <div className="flex-1 relative">
-        <PixelOfficeCanvas onAgentClick={setSelectedAgent} />
+        <PixelOfficeCanvas onAgentClick={setSelectedAgent} agents={agents} />
 
         {/* Overlay header */}
         <div className="absolute top-4 left-4 z-10">
@@ -207,6 +217,50 @@ export default function GuildPage() {
                   )}
                 </div>
               </div>
+
+              {/* Quick Actions */}
+              <div className="mt-6">
+                <h3 className="text-xs font-medium uppercase tracking-wider text-[#525252]">
+                  Actions
+                </h3>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => openDispatch(selectedAgent.id)}
+                    className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <path d="M14 2L7 9M14 2l-5 12-2-5-5-2 12-5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Send Task
+                  </button>
+                  <button
+                    onClick={() => setShowKillConfirm(true)}
+                    disabled={isExecuting}
+                    className="flex items-center gap-1.5 rounded-lg border border-[#ef4444]/20 px-3 py-1.5 text-xs font-medium text-[#ef4444] transition hover:border-[#ef4444]/40 hover:bg-[#ef4444]/10 disabled:opacity-40"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                    Kill
+                  </button>
+                </div>
+              </div>
+
+              <ConfirmDialog
+                isOpen={showKillConfirm}
+                title="Kill Session"
+                message={`Abort the current session for ${selectedAgent.name}?`}
+                onConfirm={async () => {
+                  setShowKillConfirm(false);
+                  const result = await execute({ action: "abort", agentId: selectedAgent.id });
+                  if (result.success) {
+                    addToast("success", "Session killed", result.message);
+                  } else {
+                    addToast("error", "Failed", result.error || "Could not kill session");
+                  }
+                }}
+                onCancel={() => setShowKillConfirm(false)}
+              />
             </motion.div>
           </>
         )}

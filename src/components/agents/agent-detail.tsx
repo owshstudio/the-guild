@@ -2,6 +2,7 @@
 
 import { Agent } from "@/lib/types";
 import { motion } from "framer-motion";
+import { AgentActionsBar } from "@/components/actions/agent-actions-bar";
 
 interface AgentDetailProps {
   agent: Agent;
@@ -105,6 +106,10 @@ export default function AgentDetail({ agent, onClose }: AgentDetailProps) {
           </p>
           <p className="mt-1 text-sm text-white">{agent.lastActivity}</p>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <AgentActionsBar agentId={agent.id} currentModel={agent.model} />
       </div>
 
       {agent.currentTask && (

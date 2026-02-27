@@ -3,19 +3,12 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { agents as agentData } from "@/lib/mock-data";
 import { Agent } from "@/lib/types";
-import {
-  OFFICE,
-  drawEnvironment,
-  drawDesks,
-  drawAmbientEffects,
-  drawLoki,
-} from "./office-map";
+import { OFFICE, drawEnvironment } from "./office-map";
 import {
   AgentEntity,
   createAgentEntities,
   updateAgent,
   drawAgent,
-  drawAgentTooltip,
   isAgentHovered,
 } from "./agent-entity";
 
@@ -26,7 +19,6 @@ interface PixelOfficeCanvasProps {
 export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const agentsRef = useRef<AgentEntity[]>(createAgentEntities());
-  const timeRef = useRef<number>(0);
   const hoveredRef = useRef<string | null>(null);
   const [, forceRender] = useState(0);
 
@@ -34,36 +26,29 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
     const { width, height } = OFFICE;
     ctx.clearRect(0, 0, width, height);
 
-    const time = timeRef.current;
+    // Floor + walls
+    drawEnvironment(ctx);
 
-    // Layer 1: Environment (walls, floor, furniture)
-    drawEnvironment(ctx, time);
-
-    // Layer 2: Agent desks (with monitors)
-    drawDesks(ctx, time);
-
-    // Layer 3: LOKI the cat 🐱
-    drawLoki(ctx, time);
-
-    // Layer 4: Agents
+    // Agents
     const agentEntities = agentsRef.current;
     agentEntities.forEach((agent) => {
-      updateAgent(agent, time);
+      updateAgent(agent);
       drawAgent(ctx, agent, OFFICE.scale);
     });
 
-    // Layer 5: Hover tooltip (on top of agents)
+    // Hover highlight
     if (hoveredRef.current) {
       const agent = agentEntities.find((a) => a.id === hoveredRef.current);
       if (agent) {
-        drawAgentTooltip(ctx, agent, OFFICE.scale);
+        const w = 16 * OFFICE.scale;
+        const h = 24 * OFFICE.scale;
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(agent.x - 4, agent.y - 4, w + 8, h + 8);
+        ctx.setLineDash([]);
       }
     }
-
-    // Layer 6: Ambient effects (particles, glow)
-    drawAmbientEffects(ctx, time);
-
-    timeRef.current += 1;
   }, []);
 
   useEffect(() => {
@@ -88,11 +73,9 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = OFFICE.width / rect.width;
-    const scaleY = OFFICE.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: (e.clientX - rect.left) * (OFFICE.width / rect.width),
+      y: (e.clientY - rect.top) * (OFFICE.height / rect.height),
     };
   }, []);
 
@@ -100,9 +83,7 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const coords = getCanvasCoords(e);
       if (!coords) return;
-
-      const agents = agentsRef.current;
-      for (const agent of agents) {
+      for (const agent of agentsRef.current) {
         if (isAgentHovered(agent, coords.x, coords.y, OFFICE.scale)) {
           const data = agentData.find((a) => a.id === agent.id) || null;
           onAgentClick(data);
@@ -120,10 +101,8 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
       if (!canvas) return;
       const coords = getCanvasCoords(e);
       if (!coords) return;
-
-      const agents = agentsRef.current;
       let found = false;
-      for (const agent of agents) {
+      for (const agent of agentsRef.current) {
         if (isAgentHovered(agent, coords.x, coords.y, OFFICE.scale)) {
           if (hoveredRef.current !== agent.id) {
             hoveredRef.current = agent.id;
@@ -143,13 +122,6 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
     [getCanvasCoords]
   );
 
-  const handleMouseLeave = useCallback(() => {
-    if (hoveredRef.current !== null) {
-      hoveredRef.current = null;
-      forceRender((n) => n + 1);
-    }
-  }, []);
-
   return (
     <div className="relative w-full h-full min-h-[calc(100vh-4rem)]">
       <canvas
@@ -158,11 +130,14 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
         height={OFFICE.height}
         onClick={handleClick}
         onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
+        onMouseLeave={() => {
+          hoveredRef.current = null;
+          forceRender((n) => n + 1);
+        }}
         className="w-full h-full object-cover"
         style={{
           imageRendering: "pixelated",
-          background: "#08080c",
+          background: "#d4c9a8",
         }}
       />
     </div>

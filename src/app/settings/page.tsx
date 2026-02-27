@@ -49,7 +49,31 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<GuildSettings | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<boolean | null>(null);
+  const [tokenInput, setTokenInput] = useState("");
+  const [tokenStatus, setTokenStatus] = useState<"idle" | "saving" | "ok" | "error">("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handleSaveToken = async () => {
+    if (!tokenInput.trim()) return;
+    setTokenStatus("saving");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: tokenInput.trim() }),
+      });
+      if (res.ok) {
+        setTokenStatus("ok");
+        setTokenInput("");
+        addToast("success", "Token saved", "Auth cookie set for this session");
+      } else {
+        setTokenStatus("error");
+        addToast("error", "Invalid token", "Token did not match server config");
+      }
+    } catch {
+      setTokenStatus("error");
+    }
+  };
 
   // Load settings on mount
   useEffect(() => {
@@ -151,6 +175,49 @@ export default function SettingsPage() {
                   }`}
                 />
                 {testResult ? "Connected" : "Unreachable"}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Security Token */}
+        <div className="rounded-xl border border-[#1f1f1f] bg-[#0c0c0c] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">
+            Security Token
+          </h2>
+          <p className="mt-2 text-xs text-[#737373]">
+            If <code className="rounded bg-[#1a1a1a] px-1.5 py-0.5 font-mono text-[#DF4F15]">GUILD_API_TOKEN</code> is
+            set on the server, enter it here to authenticate. Sets an httpOnly cookie
+            for all requests including SSE streams.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <input
+              type="password"
+              value={tokenInput}
+              onChange={(e) => {
+                setTokenInput(e.target.value);
+                setTokenStatus("idle");
+              }}
+              placeholder="Paste your API token"
+              className="flex-1 rounded-lg border border-[#2a2a2a] bg-[#141414] px-3 py-2 font-mono text-sm text-[#e5e5e5] placeholder:text-[#525252] focus:border-[#DF4F15] focus:outline-none"
+            />
+            <button
+              onClick={handleSaveToken}
+              disabled={!tokenInput.trim() || tokenStatus === "saving"}
+              className="rounded-lg border border-[#2a2a2a] px-4 py-2 text-xs font-medium text-[#d4d4d4] transition hover:border-[#3a3a3a] hover:bg-white/[0.03] disabled:opacity-50"
+            >
+              {tokenStatus === "saving" ? "Saving..." : "Authenticate"}
+            </button>
+            {tokenStatus === "ok" && (
+              <span className="flex items-center gap-1.5 text-xs text-[#22c55e]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+                Authenticated
+              </span>
+            )}
+            {tokenStatus === "error" && (
+              <span className="flex items-center gap-1.5 text-xs text-[#ef4444]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
+                Invalid
               </span>
             )}
           </div>

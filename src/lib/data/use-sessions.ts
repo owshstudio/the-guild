@@ -11,31 +11,50 @@ interface SessionMeta {
   isActive: boolean;
 }
 
+const BASE_INTERVAL = 30_000;
+const MAX_BACKOFF_INTERVAL = 120_000;
+
 export function useSessions() {
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const [isLive, setIsLive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const errorCountRef = useRef(0);
 
   const fetchSessions = useCallback(async () => {
     try {
       const res = await fetch("/api/gateway/sessions");
       const json = await res.json();
-      setSessions(json.data || []);
+      // json.data || [] is correct here — empty array is the intended fallback
+      setSessions(json.data ?? []);
       setIsLive(json.source === "live");
+      errorCountRef.current = 0;
     } catch {
-      setSessions([]);
-      setIsLive(false);
+      errorCountRef.current++;
+      // Keep previous data on network errors rather than resetting
+      if (errorCountRef.current >= 3) {
+        setSessions([]);
+        setIsLive(false);
+      }
     }
     setIsLoading(false);
   }, []);
 
+  const getPollInterval = useCallback(() => {
+    if (errorCountRef.current === 0) return BASE_INTERVAL;
+    return Math.min(
+      BASE_INTERVAL * Math.pow(2, errorCountRef.current),
+      MAX_BACKOFF_INTERVAL
+    );
+  }, []);
+
   const resetPollTimer = useCallback(() => {
     clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(fetchSessions, 30000);
-  }, [fetchSessions]);
+    intervalRef.current = setInterval(fetchSessions, getPollInterval());
+  }, [fetchSessions, getPollInterval]);
 
   // SSE: on session-change, refetch immediately
+  // onReconnect: refetch to cover events missed during disconnect
   useEventSource(
     "/api/gateway/events",
     {
@@ -44,12 +63,13 @@ export function useSessions() {
         resetPollTimer();
       },
     },
-    isLive
+    isLive,
+    fetchSessions
   );
 
   useEffect(() => {
     fetchSessions();
-    intervalRef.current = setInterval(fetchSessions, 30000);
+    intervalRef.current = setInterval(fetchSessions, BASE_INTERVAL);
     return () => clearInterval(intervalRef.current);
   }, [fetchSessions]);
 

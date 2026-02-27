@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Agent, CommandEntry } from "@/lib/types";
 import { useAgents } from "@/lib/data/use-agents";
 import { useDispatchContext } from "@/components/dispatch/dispatch-provider";
@@ -20,9 +20,18 @@ export default function GuildPage() {
   const [commandHistory, setCommandHistory] = useState<CommandEntry[]>([]);
   const [commandInput, setCommandInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const activeStreams = useRef<Set<EventSource>>(new Set());
+
+  // Clean up all active EventSources on unmount
+  useEffect(() => {
+    return () => {
+      activeStreams.current.forEach((es) => es.close());
+      activeStreams.current.clear();
+    };
+  }, []);
 
   const sendCommand = useCallback(
-    (agentId: string, command: string) => {
+    async (agentId: string, command: string) => {
       const entry: CommandEntry = {
         id: crypto.randomUUID(),
         agentId,
@@ -33,16 +42,86 @@ export default function GuildPage() {
       setCommandHistory((prev) => [entry, ...prev]);
       addToast("info", "Command sent", `Sent to ${agentId.toUpperCase()}`);
 
-      // Simulate response after delay (gateway would handle this in production)
-      setTimeout(() => {
+      try {
+        const res = await fetch("/api/gateway/dispatch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agentId, message: command }),
+        });
+        const { data } = await res.json();
+
+        if (!data?.success || !data.sessionId) {
+          setCommandHistory((prev) =>
+            prev.map((e) =>
+              e.id === entry.id
+                ? { ...e, status: "error", response: data?.error || "Dispatch failed" }
+                : e
+            )
+          );
+          return;
+        }
+
         setCommandHistory((prev) =>
           prev.map((e) =>
             e.id === entry.id
-              ? { ...e, status: "completed", response: "Acknowledged" }
+              ? { ...e, response: `Session ${data.sessionId} started...` }
               : e
           )
         );
-      }, 1500);
+
+        const es = new EventSource(`/api/gateway/sessions/${data.sessionId}/stream`);
+        activeStreams.current.add(es);
+
+        const closeAndRemove = () => {
+          es.close();
+          activeStreams.current.delete(es);
+        };
+
+        es.onmessage = (event) => {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.type === "message" && parsed.message?.role === "assistant") {
+              const content = typeof parsed.message.content === "string"
+                ? parsed.message.content
+                : Array.isArray(parsed.message.content)
+                  ? parsed.message.content
+                      .filter((b: { type: string }) => b.type === "text")
+                      .map((b: { text: string }) => b.text)
+                      .join("")
+                  : "Done";
+              setCommandHistory((prev) =>
+                prev.map((e) =>
+                  e.id === entry.id
+                    ? { ...e, status: "completed", response: content }
+                    : e
+                )
+              );
+              closeAndRemove();
+            }
+          } catch {
+            // ignore malformed events
+          }
+        };
+
+        es.onerror = () => {
+          closeAndRemove();
+          setCommandHistory((prev) =>
+            prev.map((e) =>
+              e.id === entry.id && e.status === "pending"
+                ? { ...e, status: "error", response: "Stream connection lost" }
+                : e
+            )
+          );
+        };
+      } catch (err) {
+        setCommandHistory((prev) =>
+          prev.map((e) =>
+            e.id === entry.id
+              ? { ...e, status: "error", response: err instanceof Error ? err.message : "Unknown error" }
+              : e
+          )
+        );
+      }
     },
     [addToast]
   );

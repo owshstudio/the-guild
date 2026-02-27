@@ -67,8 +67,27 @@ function determinePriority(text: string): HITLPriority {
   return "medium";
 }
 
+const TAIL_LINES = 50;
+
 export async function scanSessionsForHITL(): Promise<HITLItem[]> {
   const newItems: HITLItem[] = [];
+
+  // Load existing queue for deduplication
+  let existingItems: HITLItem[] = [];
+  try {
+    const queue = await readHITLQueue();
+    existingItems = queue.items;
+  } catch {
+    // no existing queue
+  }
+
+  // Build a set of sessionId+pattern combos that are already pending
+  const existingKeys = new Set<string>();
+  for (const item of existingItems) {
+    if (item.status === "pending" && item.sessionId && item.detectedPattern) {
+      existingKeys.add(`${item.sessionId}::${item.detectedPattern}`);
+    }
+  }
 
   try {
     const agentDirs = await listAgentDirs();
@@ -91,7 +110,9 @@ export async function scanSessionsForHITL(): Promise<HITLItem[]> {
         for (const session of activeSessions) {
           try {
             const raw = await readFile(session.filepath, "utf-8");
-            const lines = raw.split("\n").filter((l) => l.trim());
+            // Only process the last N lines to limit memory usage for large session files
+            const allLines = raw.split("\n").filter((l) => l.trim());
+            const lines = allLines.slice(-TAIL_LINES);
 
             for (const line of lines) {
               try {
@@ -113,6 +134,10 @@ export async function scanSessionsForHITL(): Promise<HITLItem[]> {
 
                 for (const pattern of HITL_PATTERNS) {
                   if (lower.includes(pattern)) {
+                    // Deduplication: skip if same session+pattern already pending
+                    const dedupeKey = `${session.id}::${pattern}`;
+                    if (existingKeys.has(dedupeKey)) break;
+
                     const contextStart = Math.max(
                       0,
                       lower.indexOf(pattern) - 100
@@ -140,6 +165,9 @@ export async function scanSessionsForHITL(): Promise<HITLItem[]> {
                       sessionId: session.id,
                       detectedPattern: pattern,
                     });
+
+                    // Track newly added keys to prevent duplicates within this scan
+                    existingKeys.add(dedupeKey);
 
                     break; // one match per line
                   }

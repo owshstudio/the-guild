@@ -6,10 +6,16 @@ export async function GET() {
     const status = await checkHealth();
     return NextResponse.json({ data: status, source: "live" });
   } catch (error) {
+    const msg =
+      error instanceof Error
+        ? error.message
+            .replace(/\/Users\/[^\s]*/g, "[path]")
+            .replace(/\/home\/[^\s]*/g, "[path]")
+        : "Health check failed";
     return NextResponse.json({
       data: { connected: false, gatewayPort: 18789 },
       source: "mock",
-      error: error instanceof Error ? error.message : "Health check failed",
+      error: msg,
     });
   }
 }

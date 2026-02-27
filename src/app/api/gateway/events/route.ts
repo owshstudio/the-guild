@@ -1,9 +1,10 @@
+import { NextRequest } from "next/server";
 import { getConfig } from "@/lib/gateway/config";
 import { FileWatcher } from "@/lib/gateway/file-watcher";
 
 const KEEPALIVE_MS = 15_000;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const config = await getConfig();
   const encoder = new TextEncoder();
 
@@ -25,6 +26,9 @@ export async function GET() {
           // already closed
         }
       }
+
+      // Clean up immediately when client disconnects
+      request.signal.addEventListener("abort", cleanup);
 
       function send(event: string, data: Record<string, string>) {
         if (closed) return;

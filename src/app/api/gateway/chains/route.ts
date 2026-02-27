@@ -5,6 +5,10 @@ import {
   updateChain,
   deleteChain,
 } from "@/lib/gateway/chain-engine";
+import {
+  validateRequired,
+  sanitizeErrorMessage,
+} from "@/lib/gateway/validate";
 
 export async function GET() {
   try {
@@ -14,7 +18,7 @@ export async function GET() {
     return NextResponse.json({
       data: [],
       source: "mock",
-      error: error instanceof Error ? error.message : "Failed to read chains",
+      error: sanitizeErrorMessage(error),
     });
   }
 }
@@ -22,11 +26,17 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    const missing = validateRequired(body, ["name"]);
+    if (missing) {
+      return NextResponse.json({ error: missing }, { status: 400 });
+    }
+
     const data = await createChain(body);
     return NextResponse.json({ data, source: "live" });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create chain" },
+      { error: sanitizeErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -42,7 +52,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ data, source: "live" });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update chain" },
+      { error: sanitizeErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -61,7 +71,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ data, source: "live" });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete chain" },
+      { error: sanitizeErrorMessage(error) },
       { status: 500 }
     );
   }

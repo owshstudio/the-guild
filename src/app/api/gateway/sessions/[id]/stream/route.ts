@@ -9,7 +9,7 @@ const KEEPALIVE_MS = 15_000;
 const INACTIVE_TIMEOUT_MS = 5 * 60 * 1000;
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -45,6 +45,9 @@ export async function GET(
           // already closed
         }
       }
+
+      // Clean up immediately when client disconnects
+      request.signal.addEventListener("abort", cleanup);
 
       function resetInactiveTimer() {
         clearTimeout(inactiveTimer);

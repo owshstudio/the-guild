@@ -46,12 +46,12 @@ export async function GET(
 
     return NextResponse.json({ data: detail, source: "live" });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to load session",
-      },
-      { status: 500 }
-    );
+    const msg =
+      error instanceof Error
+        ? error.message
+            .replace(/\/Users\/[^\s]*/g, "[path]")
+            .replace(/\/home\/[^\s]*/g, "[path]")
+        : "Failed to load session";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

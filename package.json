@@ -1,7 +1,26 @@
 {
-  "name": "guild-scaffold",
+  "name": "@owshstudio/the-guild",
   "version": "0.1.0",
-  "private": true,
+  "bin": {
+    "the-guild": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin/",
+    ".next/standalone/",
+    ".next/static/",
+    "public/"
+  ],
+  "keywords": [
+    "openclaw",
+    "ai-agents",
+    "dashboard",
+    "monitoring"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/owshstudio/the-guild"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "dev:lan": "next dev --turbopack --hostname 0.0.0.0",

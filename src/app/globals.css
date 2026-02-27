@@ -63,3 +63,7 @@ body {
   -webkit-mask-composite: xor;
   pointer-events: none;
 }
+
+/* Hide scrollbar utility */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }

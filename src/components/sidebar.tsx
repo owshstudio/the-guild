@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const navItems = [
   { href: "/guild", label: "Guild", icon: GuildIcon },
+  { href: "/chat", label: "Chat", icon: ChatIcon },
   { href: "/agents", label: "Agents", icon: AgentsIcon },
   { href: "/activity", label: "Activity", icon: ActivityIcon },
   { href: "/sessions", label: "Sessions", icon: SessionsIcon },
@@ -138,6 +139,16 @@ export default function Sidebar() {
         </div>
       </aside>
     </>
+  );
+}
+
+function ChatIcon({ active }: { active?: boolean }) {
+  const color = active ? "#e5e5e5" : "currentColor";
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 3h12a1 1 0 011 1v8a1 1 0 01-1 1H6l-3 3V4a1 1 0 011-1z" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M7 7h4M7 10h2" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   );
 }
 

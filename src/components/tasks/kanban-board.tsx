@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Reorder } from "framer-motion";
-import { tasks as mockTasks, agents } from "@/lib/mock-data";
-import { Task, TaskStatus } from "@/lib/types";
+import { Task, TaskStatus, Agent } from "@/lib/types";
 import TaskCard from "./task-card";
 
 const statusOrder: TaskStatus[] = [
@@ -15,17 +14,29 @@ const statusOrder: TaskStatus[] = [
   "completed",
 ];
 
-export default function KanbanBoard() {
+interface KanbanBoardProps {
+  tasks: Task[];
+  agents: Agent[];
+  onUpdateTask: (id: string, patch: Partial<Task>) => Promise<void>;
+  onDeleteTask: (id: string) => Promise<void>;
+}
+
+export default function KanbanBoard({
+  tasks,
+  agents,
+  onUpdateTask,
+  onDeleteTask,
+}: KanbanBoardProps) {
   // Track task order per agent
   const [taskOrderMap, setTaskOrderMap] = useState<Record<string, string[]>>(
     {}
   );
 
-  // Initialize order from mock data
+  // Rebuild order when tasks or agents change
   useEffect(() => {
     const orderMap: Record<string, string[]> = {};
     for (const agent of agents) {
-      const agentTasks = [...mockTasks]
+      const agentTasks = [...tasks]
         .filter((t) => t.agentId === agent.id)
         .sort(
           (a, b) =>
@@ -34,7 +45,7 @@ export default function KanbanBoard() {
       orderMap[agent.id] = agentTasks.map((t) => t.id);
     }
     setTaskOrderMap(orderMap);
-  }, []);
+  }, [tasks, agents]);
 
   const handleReorder = useCallback(
     (agentId: string, newOrder: string[]) => {
@@ -45,7 +56,7 @@ export default function KanbanBoard() {
 
   // Build a task lookup
   const taskMap = new Map<string, Task>();
-  for (const t of mockTasks) {
+  for (const t of tasks) {
     taskMap.set(t.id, t);
   }
 
@@ -107,7 +118,12 @@ export default function KanbanBoard() {
                       }}
                       className="cursor-grab active:cursor-grabbing"
                     >
-                      <TaskCard task={task} draggable />
+                      <TaskCard
+                        task={task}
+                        draggable
+                        onUpdateTask={onUpdateTask}
+                        onDeleteTask={onDeleteTask}
+                      />
                     </Reorder.Item>
                   );
                 })}

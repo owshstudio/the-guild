@@ -23,10 +23,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: costs, source: "live" });
   } catch (error) {
+    const msg =
+      error instanceof Error
+        ? error.message
+            .replace(/\/Users\/[^\s]*/g, "[path]")
+            .replace(/\/home\/[^\s]*/g, "[path]")
+        : "Failed to aggregate costs";
     return NextResponse.json({
       data: mockCostEntries,
       source: "mock",
-      error: error instanceof Error ? error.message : "Failed to aggregate costs",
+      error: msg,
     });
   }
 }

@@ -2,6 +2,20 @@ import { readFile, readdir, stat } from "fs/promises";
 import path from "path";
 import { getConfig } from "./config";
 
+/**
+ * Sanitize an ID parameter to prevent path traversal.
+ * Returns the sanitized string if valid, or null if it contains unsafe characters.
+ * Only allows alphanumeric, hyphens, underscores, and dots (no leading dot).
+ */
+export function sanitizeId(id: string): string | null {
+  if (!id || typeof id !== "string") return null;
+  // Reject path traversal sequences and separators
+  if (id.includes("..") || id.includes("/") || id.includes("\\")) return null;
+  // Only allow safe characters: alphanumeric, hyphens, underscores, dots (no leading dot)
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(id)) return null;
+  return id;
+}
+
 export interface AgentIdentity {
   name: string;
   emoji: string;
@@ -77,10 +91,13 @@ export async function listAgentDirs(): Promise<string[]> {
 
 export async function listSessions(agentId?: string): Promise<SessionMeta[]> {
   try {
+    const resolvedAgent = agentId || "main";
+    if (!sanitizeId(resolvedAgent)) return [];
+
     const config = await getConfig();
     const sessionsDir = path.join(
       config.agentsPath,
-      agentId || "main",
+      resolvedAgent,
       "sessions"
     );
     const files = await readdir(sessionsDir);
@@ -138,6 +155,8 @@ export async function readToolsList(subpath?: string): Promise<string[]> {
 
 export async function findSessionById(id: string): Promise<string | null> {
   try {
+    if (!sanitizeId(id)) return null;
+
     const config = await getConfig();
     const agentDirs = await listAgentDirs();
     for (const agentId of agentDirs) {

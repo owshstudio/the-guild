@@ -13,10 +13,16 @@ export async function GET() {
     const agents = await buildAgents();
     return NextResponse.json({ data: agents, source: "live" });
   } catch (error) {
+    const msg =
+      error instanceof Error
+        ? error.message
+            .replace(/\/Users\/[^\s]*/g, "[path]")
+            .replace(/\/home\/[^\s]*/g, "[path]")
+        : "Failed to build agents";
     return NextResponse.json({
       data: mockAgents,
       source: "mock",
-      error: error instanceof Error ? error.message : "Failed to build agents",
+      error: msg,
     });
   }
 }

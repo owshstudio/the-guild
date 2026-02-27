@@ -28,6 +28,7 @@ import {
   saveOfficeConfig,
 } from "@/lib/gateway/office-config";
 import CharacterCreator from "@/components/character-creator/character-creator";
+import { loadSettings, GuildSettings } from "@/lib/settings";
 
 interface PixelOfficeCanvasProps {
   onAgentClick: (agent: Agent | null) => void;
@@ -68,8 +69,19 @@ export default function PixelOfficeCanvas({
   const lastTimeRef = useRef(performance.now());
   const editModeRef = useRef<EditModeState>(createEditModeState());
   const pulseRef = useRef(0);
+  const settingsRef = useRef<GuildSettings["appearance"]>(loadSettings().appearance);
   const [, forceRender] = useState(0);
   const [creatorAgentId, setCreatorAgentId] = useState<string | null>(null);
+
+  // Load settings on mount and listen for storage changes
+  useEffect(() => {
+    settingsRef.current = loadSettings().appearance;
+    const handleStorage = () => {
+      settingsRef.current = loadSettings().appearance;
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   // Initialize agent rooms in room manager
   useEffect(() => {
@@ -375,6 +387,8 @@ export default function PixelOfficeCanvas({
       const { width, height } = OFFICE;
       const rm = roomManagerRef.current;
       const allAgents = agentsRef.current;
+      const appearance = settingsRef.current;
+      const spriteScale = appearance.pixelScale;
 
       ctx.clearRect(0, 0, width, height);
 
@@ -420,7 +434,7 @@ export default function PixelOfficeCanvas({
         if (edit.active && edit.draggedAgentId === agent.id && edit.mousePixel) {
           return;
         }
-        drawAgent(ctx, agent, OFFICE.spriteScale);
+        drawAgent(ctx, agent, spriteScale);
       });
 
       // Pass 4: furniture in front of agents
@@ -431,14 +445,14 @@ export default function PixelOfficeCanvas({
         ctx.globalAlpha = 1;
       }
 
-      // Pass 5: overlays (hover highlight)
-      if (hoveredRef.current && !edit.active) {
+      // Pass 5: overlays (hover highlight) — gated by ambientLighting setting
+      if (hoveredRef.current && !edit.active && appearance.ambientLighting) {
         const agent = visibleAgents.find(
           (a) => a.id === hoveredRef.current
         );
         if (agent) {
-          const w = 16 * OFFICE.spriteScale;
-          const h = 24 * OFFICE.spriteScale;
+          const w = 16 * spriteScale;
+          const h = 24 * spriteScale;
           ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
           ctx.lineWidth = 2;
           ctx.setLineDash([4, 4]);
@@ -456,8 +470,8 @@ export default function PixelOfficeCanvas({
           (a) => a.id === edit.draggedAgentId
         );
         if (draggedAgent) {
-          const sw = 16 * OFFICE.spriteScale;
-          const sh = 24 * OFFICE.spriteScale;
+          const sw = 16 * spriteScale;
+          const sh = 24 * spriteScale;
           ctx.save();
           ctx.globalAlpha = 0.7;
           // Temporarily set agent position for drawing
@@ -465,7 +479,7 @@ export default function PixelOfficeCanvas({
           const origY = draggedAgent.y;
           draggedAgent.x = edit.mousePixel.x - sw / 2;
           draggedAgent.y = edit.mousePixel.y - sh / 2;
-          drawAgent(ctx, draggedAgent, OFFICE.spriteScale);
+          drawAgent(ctx, draggedAgent, spriteScale);
           draggedAgent.x = origX;
           draggedAgent.y = origY;
           ctx.globalAlpha = 1;
@@ -476,8 +490,10 @@ export default function PixelOfficeCanvas({
       // Pass 7: room tabs
       drawRoomTabs(ctx);
 
-      // Pass 8: minimap
-      drawMinimap(ctx);
+      // Pass 8: minimap — gated by particles setting (minimap acts as ambient particle UI)
+      if (appearance.particles) {
+        drawMinimap(ctx);
+      }
 
       // Pass 9: edit button
       drawEditButton(ctx);
@@ -536,7 +552,7 @@ export default function PixelOfficeCanvas({
       // Check if clicking on an agent during edit mode
       for (const agent of visibleAgents) {
         if (
-          isAgentHovered(agent, coords.x, coords.y, OFFICE.spriteScale)
+          isAgentHovered(agent, coords.x, coords.y, settingsRef.current.pixelScale)
         ) {
           // Start drag
           const available = getAvailableDesks(
@@ -679,7 +695,7 @@ export default function PixelOfficeCanvas({
         const visibleAgents = rm.getCurrentAgents(agentsRef.current);
         for (const agent of visibleAgents) {
           if (
-            isAgentHovered(agent, coords.x, coords.y, OFFICE.spriteScale)
+            isAgentHovered(agent, coords.x, coords.y, settingsRef.current.pixelScale)
           ) {
             setCreatorAgentId(agent.id);
             forceRender((n) => n + 1);
@@ -760,7 +776,7 @@ export default function PixelOfficeCanvas({
       const visibleAgents = rm.getCurrentAgents(agentsRef.current);
       for (const agent of visibleAgents) {
         if (
-          isAgentHovered(agent, coords.x, coords.y, OFFICE.spriteScale)
+          isAgentHovered(agent, coords.x, coords.y, settingsRef.current.pixelScale)
         ) {
           const data = agentsProp?.find((a) => a.id === agent.id) || null;
           onAgentClick(data);
@@ -840,7 +856,7 @@ export default function PixelOfficeCanvas({
       let found = false;
       for (const agent of visibleAgents) {
         if (
-          isAgentHovered(agent, coords.x, coords.y, OFFICE.spriteScale)
+          isAgentHovered(agent, coords.x, coords.y, settingsRef.current.pixelScale)
         ) {
           if (hoveredRef.current !== agent.id) {
             hoveredRef.current = agent.id;

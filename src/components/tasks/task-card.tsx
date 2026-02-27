@@ -5,6 +5,8 @@ import { Task, TaskStatus } from "@/lib/types";
 interface TaskCardProps {
   task: Task;
   draggable?: boolean;
+  onUpdateTask?: (id: string, patch: Partial<Task>) => Promise<void>;
+  onDeleteTask?: (id: string) => Promise<void>;
 }
 
 const statusConfig: Record<
@@ -25,16 +27,44 @@ const priorityColors: Record<string, { bg: string; text: string }> = {
   low: { bg: "#52525220", text: "#737373" },
 };
 
-export default function TaskCard({ task, draggable }: TaskCardProps) {
+export default function TaskCard({
+  task,
+  draggable,
+  onUpdateTask,
+  onDeleteTask,
+}: TaskCardProps) {
   const status = statusConfig[task.status];
   const priority = priorityColors[task.priority] || priorityColors.low;
 
   return (
     <div
-      className={`group rounded-lg border border-[#1f1f1f] bg-[#141414] p-3 transition hover:border-[#2a2a2a] hover:bg-[#1a1a1a] ${
+      className={`group relative rounded-lg border border-[#1f1f1f] bg-[#141414] p-3 transition hover:border-[#2a2a2a] hover:bg-[#1a1a1a] ${
         task.status === "completed" ? "opacity-60" : ""
       }`}
     >
+      {/* Delete button */}
+      {onDeleteTask && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteTask(task.id);
+          }}
+          className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded text-[#525252] opacity-0 transition hover:bg-white/[0.06] hover:text-[#ef4444] group-hover:opacity-100"
+          title="Delete task"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          >
+            <path d="M2 2l8 8M10 2l-8 8" />
+          </svg>
+        </button>
+      )}
       <div className="flex items-start gap-2">
         {/* Drag handle */}
         {draggable && (

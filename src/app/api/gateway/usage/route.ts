@@ -13,10 +13,16 @@ export async function GET() {
     const usage = await aggregateUsage();
     return NextResponse.json({ data: usage, source: "live" });
   } catch (error) {
+    const msg =
+      error instanceof Error
+        ? error.message
+            .replace(/\/Users\/[^\s]*/g, "[path]")
+            .replace(/\/home\/[^\s]*/g, "[path]")
+        : "Failed to aggregate usage";
     return NextResponse.json({
       data: mockUsage,
       source: "mock",
-      error: error instanceof Error ? error.message : "Failed to aggregate usage",
+      error: msg,
     });
   }
 }

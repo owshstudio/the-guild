@@ -1,10 +1,26 @@
 import { NextResponse } from "next/server";
 import type { DispatchRequest, DispatchResponse } from "@/lib/types";
 import { sendGatewayCommand } from "@/lib/gateway/ws-client";
+import {
+  validateRequired,
+  sanitizeErrorMessage,
+} from "@/lib/gateway/validate";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as DispatchRequest;
+
+    const missing = validateRequired(
+      body as unknown as Record<string, unknown>,
+      ["agentId", "message"]
+    );
+    if (missing) {
+      return NextResponse.json(
+        { data: { success: false, error: missing } as DispatchResponse },
+        { status: 400 }
+      );
+    }
+
     const { agentId, message, sessionId } = body;
 
     const result = await sendGatewayCommand("chat.send", {
@@ -29,7 +45,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const response: DispatchResponse = {
       success: false,
-      error: error instanceof Error ? error.message : "Dispatch failed",
+      error: sanitizeErrorMessage(error),
     };
     return NextResponse.json({ data: response, source: "mock" });
   }

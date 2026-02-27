@@ -9,6 +9,7 @@ import SessionViewer from "@/components/sessions/session-viewer";
 export default function SessionsPage() {
   const { sessions } = useSessions();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mobileShowViewer, setMobileShowViewer] = useState(false);
   const { session, isLoading, isLive, hasMore, setPage } =
     useSessionDetail(selectedId);
 
@@ -16,17 +17,43 @@ export default function SessionsPage() {
     setPage((p) => p + 1);
   }, [setPage]);
 
+  const handleSelect = useCallback((id: string) => {
+    setSelectedId(id);
+    setMobileShowViewer(true);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setMobileShowViewer(false);
+  }, []);
+
   return (
     <div className="flex h-[calc(100vh-48px)]">
-      <div className="w-80 shrink-0">
+      <div
+        className={`w-full lg:w-80 lg:shrink-0 ${
+          mobileShowViewer ? "hidden lg:flex lg:flex-col" : "flex flex-col"
+        }`}
+      >
         <SessionList
           sessions={sessions}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={handleSelect}
         />
       </div>
 
-      <div className="flex-1">
+      <div
+        className={`flex-1 ${
+          mobileShowViewer ? "flex flex-col" : "hidden lg:flex lg:flex-col"
+        }`}
+      >
+        {mobileShowViewer && (
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-1 border-b border-[#1f1f1f] bg-[#0c0c0c] px-4 py-2 text-sm text-[#a3a3a3] lg:hidden"
+          >
+            &larr; Sessions
+          </button>
+        )}
+
         {!selectedId ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">

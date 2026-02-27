@@ -1,86 +1,65 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { subscribe, isConnected } from "./sse-manager";
 
 interface EventHandlers {
   [eventType: string]: (data: unknown) => void;
 }
 
-const MAX_BACKOFF_MS = 30_000;
-
+/**
+ * SSE hook backed by a shared connection manager.
+ *
+ * Multiple hooks calling useEventSource with the same URL share a single
+ * underlying EventSource connection (ref-counted, auto-reconnects).
+ *
+ * `onReconnect` fires when the shared connection re-establishes after
+ * a disconnect, allowing callers to refetch data missed while offline.
+ */
 export function useEventSource(
   url: string,
   handlers: EventHandlers,
-  enabled = true
+  enabled = true,
+  onReconnect?: () => void
 ): { connected: boolean } {
   const [connected, setConnected] = useState(false);
   const handlersRef = useRef(handlers);
-  const retriesRef = useRef(0);
-  const esRef = useRef<EventSource | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const onReconnectRef = useRef(onReconnect);
 
-  // Keep handlers ref in sync without triggering reconnects
+  // Keep refs in sync without triggering re-subscribe
   handlersRef.current = handlers;
+  onReconnectRef.current = onReconnect;
 
-  const cleanup = useCallback(() => {
-    clearTimeout(reconnectTimerRef.current);
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
+  const listener = useCallback((event: string, data: unknown) => {
+    if (event === "__reconnect") {
+      setConnected(true);
+      onReconnectRef.current?.();
+      return;
     }
-    setConnected(false);
+    handlersRef.current[event]?.(data);
   }, []);
 
   useEffect(() => {
     if (!enabled) {
-      cleanup();
+      setConnected(false);
       return;
     }
 
-    function connect() {
-      cleanup();
+    const unsubscribe = subscribe(url, listener);
 
-      const es = new EventSource(url);
-      esRef.current = es;
+    // Check initial connection state
+    setConnected(isConnected(url));
 
-      es.onopen = () => {
-        setConnected(true);
-        retriesRef.current = 0;
-      };
+    // Poll connection state (lightweight — just reads readyState)
+    const check = setInterval(() => {
+      setConnected(isConnected(url));
+    }, 3000);
 
-      es.onerror = () => {
-        setConnected(false);
-        es.close();
-        esRef.current = null;
-
-        // Exponential backoff: 1s, 2s, 4s, 8s, ... max 30s
-        const delay = Math.min(
-          1000 * Math.pow(2, retriesRef.current),
-          MAX_BACKOFF_MS
-        );
-        retriesRef.current++;
-        reconnectTimerRef.current = setTimeout(connect, delay);
-      };
-
-      // Register named event listeners
-      const eventTypes = Object.keys(handlersRef.current);
-      for (const eventType of eventTypes) {
-        es.addEventListener(eventType, ((event: MessageEvent) => {
-          try {
-            const data = JSON.parse(event.data);
-            handlersRef.current[eventType]?.(data);
-          } catch {
-            // malformed data
-          }
-        }) as EventListener);
-      }
-    }
-
-    connect();
-
-    return cleanup;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, enabled, cleanup]);
+    return () => {
+      unsubscribe();
+      clearInterval(check);
+    };
+  }, [url, enabled, listener]);
 
   return { connected };
 }

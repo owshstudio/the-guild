@@ -13,10 +13,16 @@ export async function GET() {
     const activity = await buildActivity();
     return NextResponse.json({ data: activity, source: "live" });
   } catch (error) {
+    const msg =
+      error instanceof Error
+        ? error.message
+            .replace(/\/Users\/[^\s]*/g, "[path]")
+            .replace(/\/home\/[^\s]*/g, "[path]")
+        : "Failed to build activity";
     return NextResponse.json({
       data: mockActivity,
       source: "mock",
-      error: error instanceof Error ? error.message : "Failed to build activity",
+      error: msg,
     });
   }
 }

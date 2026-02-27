@@ -1,0 +1,10 @@
+services:
+  guild:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ~/.openclaw:/data/.openclaw:ro
+    environment:
+      OPENCLAW_DIR: /data/.openclaw
+      GUILD_API_TOKEN: ${GUILD_API_TOKEN:-}

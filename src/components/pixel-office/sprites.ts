@@ -1,222 +1,225 @@
-// Pixel art sprite data — 32x32 detailed sprites
-// Each sprite uses color index arrays mapped to hex palettes
+// Agent character drawing — procedural pixel art characters
+// Much cleaner than grid arrays, actual recognizable figures
 
 export type SpriteData = {
   width: number;
   height: number;
-  palette: string[];
-  frames: Record<string, number[][]>;
+  id: string;
 };
 
-const T = 0; // transparent
+export const nyxSprite: SpriteData = { width: 28, height: 40, id: "nyx" };
+export const hemeraSprite: SpriteData = { width: 28, height: 40, id: "hemera" };
 
-// NYX — dark purple hoodie, flowing hair, glowing purple eyes
-export const nyxSprite: SpriteData = {
-  width: 32,
-  height: 32,
-  palette: [
-    "transparent", // 0
-    "#0f0a1a",     // 1 - outline/very dark
-    "#1a1030",     // 2 - dark purple shadow
-    "#2d1b69",     // 3 - purple body
-    "#7c3aed",     // 4 - bright purple accent
-    "#a78bfa",     // 5 - light purple glow
-    "#e0d0ff",     // 6 - pale skin
-    "#c4b5fd",     // 7 - hair highlight
-    "#4c1d95",     // 8 - mid purple
-    "#ffffff",     // 9 - eye white
-    "#6d28d9",     // 10 - eye iris purple
-    "#ddd6fe",     // 11 - skin highlight
-    "#8b5cf6",     // 12 - purple mid-light
-    "#3b0764",     // 13 - deep purple
-    "#581c87",     // 14 - hood shadow
-    "#1e1b4b",     // 15 - darkest clothing
-  ],
-  frames: {
-    idle: [
-      [T,T,T,T,T,T,T,T,T,T,T,7,7,7,7,7,7,7,7,7,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,7,7,5,5,7,7,7,7,5,5,7,7,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,7,5,5,5,7,7,7,7,7,7,5,5,5,7,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,7,5,5,7,7,7,7,7,7,7,7,7,7,5,5,7,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,7,5,7,7,1,1,1,1,1,1,1,1,7,7,5,7,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,5,7,1,1,1,1,1,1,1,1,1,1,1,1,7,5,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,5,1,1,6,6,6,6,6,6,6,6,6,6,1,1,5,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,1,6,6,6,6,6,6,6,6,6,6,6,6,1,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,9,9,6,6,6,6,9,9,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,9,10,4,9,6,6,9,10,4,9,6,6,1,7,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,6,6,11,11,6,6,6,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,1,6,6,6,6,6,6,6,6,6,6,6,1,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,1,6,6,12,12,12,12,6,6,1,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,1,1,1,1,1,1,1,1,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,3,8,8,8,8,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,3,3,14,3,3,3,3,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,3,14,3,3,4,4,4,4,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,3,14,3,3,3,3,3,3,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,6,3,3,3,3,3,3,3,3,3,3,6,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,6,11,3,3,3,3,3,3,3,3,11,6,3,1,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,3,3,3,3,3,3,3,3,3,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,3,3,3,3,3,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,15,15,3,3,15,15,3,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,15,15,15,1,1,15,15,15,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,2,2,2,1,1,2,2,2,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,2,2,2,1,1,2,2,2,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,1,1,1,T,T,1,1,1,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-    ],
-    typing: [
-      [T,T,T,T,T,T,T,T,T,T,T,7,7,7,7,7,7,7,7,7,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,7,7,5,5,7,7,7,7,5,5,7,7,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,7,5,5,5,7,7,7,7,7,7,5,5,5,7,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,7,5,5,7,7,7,7,7,7,7,7,7,7,5,5,7,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,7,5,7,7,1,1,1,1,1,1,1,1,7,7,5,7,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,5,7,1,1,1,1,1,1,1,1,1,1,1,1,7,5,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,5,1,1,6,6,6,6,6,6,6,6,6,6,1,1,5,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,1,6,6,6,6,6,6,6,6,6,6,6,6,1,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,9,9,6,6,6,6,9,9,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,9,10,4,9,6,6,9,10,4,9,6,6,1,7,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,1,6,6,6,6,6,6,6,6,6,6,6,1,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,1,6,6,12,12,12,12,6,6,1,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,1,1,1,1,1,1,1,1,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,3,8,8,8,8,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,3,3,14,3,3,3,3,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,3,14,3,3,4,4,4,4,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,1,3,3,14,3,3,3,3,3,3,3,3,3,14,3,3,3,1,T,T,T,T,T,T,T,T],
-      [T,T,T,T,6,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,6,T,T,T,T,T,T,T,T],
-      [T,T,T,6,11,T,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,T,11,6,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,3,3,3,3,3,3,3,3,3,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,3,3,3,3,3,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,15,15,3,3,15,15,3,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,15,15,15,1,1,15,15,15,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,2,2,2,1,1,2,2,2,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,2,2,2,1,1,2,2,2,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,1,1,1,T,T,1,1,1,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-    ],
-  },
-};
+// Draw NYX — dark purple hoodie, flowing dark hair, pale skin, glowing purple eyes
+export function drawNyx(ctx: CanvasRenderingContext2D, x: number, y: number, frame: "idle" | "typing", scale: number) {
+  const s = scale; // shorthand
+  ctx.save();
 
-// HEMERA — golden/warm, clean bright look
-export const hemeraSprite: SpriteData = {
-  width: 32,
-  height: 32,
-  palette: [
-    "transparent", // 0
-    "#451a03",     // 1 - outline dark
-    "#78350f",     // 2 - dark brown
-    "#d97706",     // 3 - amber clothing
-    "#fbbf24",     // 4 - gold accent
-    "#fde68a",     // 5 - light gold
-    "#fef3c7",     // 6 - pale warm skin
-    "#f59e0b",     // 7 - amber hair
-    "#b45309",     // 8 - dark amber
-    "#ffffff",     // 9 - eye white
-    "#ea580c",     // 10 - eye iris orange
-    "#fff7ed",     // 11 - skin highlight
-    "#fcd34d",     // 12 - gold mid
-    "#92400e",     // 13 - deep brown
-    "#a16207",     // 14 - clothing shadow
-    "#7c2d12",     // 15 - darkest clothing
-  ],
-  frames: {
-    idle: [
-      [T,T,T,T,T,T,T,T,T,T,T,7,7,7,7,7,7,7,7,7,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,7,7,4,4,7,7,7,7,4,4,7,7,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,7,4,12,4,7,7,7,7,7,7,4,12,4,7,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,7,4,12,7,7,7,7,7,7,7,7,7,7,12,4,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,7,4,7,7,1,1,1,1,1,1,1,1,7,7,4,7,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,4,7,1,1,1,1,1,1,1,1,1,1,1,1,7,4,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,4,1,1,6,6,6,6,6,6,6,6,6,6,1,1,4,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,1,6,6,6,6,6,6,6,6,6,6,6,6,1,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,9,9,6,6,6,6,9,9,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,9,10,3,9,6,6,9,10,3,9,6,6,1,7,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,6,6,11,11,6,6,6,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,1,6,6,6,6,6,6,6,6,6,6,6,1,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,1,6,6,4,4,4,4,6,6,1,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,1,1,1,1,1,1,1,1,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,3,8,8,8,8,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,3,3,14,3,3,3,3,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,3,14,3,3,4,4,4,4,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,3,14,3,3,3,3,3,3,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,6,3,3,3,3,3,3,3,3,3,3,6,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,6,11,3,3,3,3,3,3,3,3,11,6,3,1,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,3,3,3,3,3,3,3,3,3,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,3,3,3,3,3,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,15,15,3,3,15,15,3,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,15,15,15,1,1,15,15,15,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,2,2,2,1,1,2,2,2,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,2,2,2,1,1,2,2,2,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,1,1,1,T,T,1,1,1,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-    ],
-    typing: [
-      [T,T,T,T,T,T,T,T,T,T,T,7,7,7,7,7,7,7,7,7,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,7,7,4,4,7,7,7,7,4,4,7,7,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,7,4,12,4,7,7,7,7,7,7,4,12,4,7,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,7,4,12,7,7,7,7,7,7,7,7,7,7,12,4,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,7,4,7,7,1,1,1,1,1,1,1,1,7,7,4,7,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,4,7,1,1,1,1,1,1,1,1,1,1,1,1,7,4,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,4,1,1,6,6,6,6,6,6,6,6,6,6,1,1,4,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,1,6,6,6,6,6,6,6,6,6,6,6,6,1,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,9,9,6,6,6,6,9,9,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,9,10,3,9,6,6,9,10,3,9,6,6,1,7,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,7,1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1,7,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,1,6,6,6,6,6,6,6,6,6,6,6,1,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,1,6,6,4,4,4,4,6,6,1,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,1,1,1,1,1,1,1,1,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,3,8,8,8,8,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,3,3,14,3,3,3,3,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,1,3,3,14,3,3,4,4,4,4,3,3,14,3,3,1,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,1,3,3,14,3,3,3,3,3,3,3,3,3,14,3,3,3,1,T,T,T,T,T,T,T,T],
-      [T,T,T,T,6,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,6,T,T,T,T,T,T,T,T],
-      [T,T,T,6,11,T,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,T,11,6,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,1,3,3,3,3,3,3,3,3,3,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,3,3,3,3,3,3,3,3,1,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,1,3,3,15,15,3,3,15,15,3,3,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,15,15,15,1,1,15,15,15,1,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,2,2,2,1,1,2,2,2,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,2,2,2,1,1,2,2,2,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,1,1,1,1,T,T,1,1,1,1,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-      [T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T],
-    ],
-  },
-};
+  // === HAIR (dark purple, flows down past shoulders) ===
+  ctx.fillStyle = "#2d1b69";
+  // Hair top/back
+  roundRect(ctx, x + 8*s, y + 0*s, 12*s, 4*s, 2*s);
+  ctx.fill();
+  ctx.fillRect(x + 7*s, y + 2*s, 14*s, 6*s);
+  // Hair sides flowing down
+  ctx.fillStyle = "#1a1030";
+  ctx.fillRect(x + 6*s, y + 4*s, 3*s, 12*s);
+  ctx.fillRect(x + 19*s, y + 4*s, 3*s, 12*s);
+  // Hair highlights
+  ctx.fillStyle = "#4c1d95";
+  ctx.fillRect(x + 8*s, y + 1*s, 2*s, 3*s);
+  ctx.fillRect(x + 17*s, y + 2*s, 2*s, 2*s);
 
+  // === HEAD ===
+  ctx.fillStyle = "#e0d0ff"; // pale skin
+  roundRect(ctx, x + 9*s, y + 4*s, 10*s, 10*s, 2*s);
+  ctx.fill();
+
+  // === EYES (glowing purple) ===
+  // Eye whites
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x + 11*s, y + 7*s, 3*s, 2*s);
+  ctx.fillRect(x + 16*s, y + 7*s, 3*s, 2*s);
+  // Irises (purple glow)
+  ctx.fillStyle = "#7c3aed";
+  ctx.fillRect(x + 12*s, y + 7*s, 2*s, 2*s);
+  ctx.fillRect(x + 17*s, y + 7*s, 2*s, 2*s);
+  // Pupil
+  ctx.fillStyle = "#1a1030";
+  ctx.fillRect(x + 12*s, y + 8*s, 1*s, 1*s);
+  ctx.fillRect(x + 17*s, y + 8*s, 1*s, 1*s);
+  // Eye glow
+  ctx.fillStyle = "rgba(124, 58, 237, 0.15)";
+  ctx.fillRect(x + 10*s, y + 6*s, 8*s, 4*s);
+
+  // === MOUTH (subtle) ===
+  ctx.fillStyle = "#c4a0e0";
+  ctx.fillRect(x + 13*s, y + 11*s, 3*s, 1*s);
+
+  // === HOODIE / BODY ===
+  ctx.fillStyle = "#2d1b69"; // purple hoodie
+  // Hood outline around head
+  ctx.fillRect(x + 7*s, y + 3*s, 2*s, 5*s);
+  ctx.fillRect(x + 19*s, y + 3*s, 2*s, 5*s);
+  ctx.fillRect(x + 7*s, y + 2*s, 14*s, 2*s);
+  // Torso
+  roundRect(ctx, x + 7*s, y + 14*s, 14*s, 12*s, 2*s);
+  ctx.fill();
+  // Hoodie pocket/detail
+  ctx.fillStyle = "#4c1d95";
+  ctx.fillRect(x + 10*s, y + 20*s, 8*s, 3*s);
+  // Hood string
+  ctx.fillStyle = "#a78bfa";
+  ctx.fillRect(x + 12*s, y + 14*s, 1*s, 4*s);
+  ctx.fillRect(x + 15*s, y + 14*s, 1*s, 3*s);
+
+  // === ARMS ===
+  ctx.fillStyle = "#2d1b69";
+  if (frame === "typing") {
+    // Arms forward (on keyboard)
+    ctx.fillRect(x + 5*s, y + 16*s, 3*s, 8*s);
+    ctx.fillRect(x + 20*s, y + 16*s, 3*s, 8*s);
+    // Forearms reaching to keyboard
+    ctx.fillRect(x + 4*s, y + 23*s, 4*s, 3*s);
+    ctx.fillRect(x + 20*s, y + 23*s, 4*s, 3*s);
+    // Hands (skin)
+    ctx.fillStyle = "#e0d0ff";
+    ctx.fillRect(x + 4*s, y + 25*s, 3*s, 2*s);
+    ctx.fillRect(x + 21*s, y + 25*s, 3*s, 2*s);
+  } else {
+    // Arms at sides / relaxed
+    ctx.fillRect(x + 5*s, y + 16*s, 3*s, 9*s);
+    ctx.fillRect(x + 20*s, y + 16*s, 3*s, 9*s);
+    // Hands
+    ctx.fillStyle = "#e0d0ff";
+    ctx.fillRect(x + 5*s, y + 24*s, 3*s, 2*s);
+    ctx.fillRect(x + 20*s, y + 24*s, 3*s, 2*s);
+  }
+
+  // === LEGS (dark pants) ===
+  ctx.fillStyle = "#0f0a1a";
+  ctx.fillRect(x + 9*s, y + 26*s, 4*s, 10*s);
+  ctx.fillRect(x + 15*s, y + 26*s, 4*s, 10*s);
+
+  // === SHOES ===
+  ctx.fillStyle = "#1a1030";
+  ctx.fillRect(x + 8*s, y + 35*s, 5*s, 3*s);
+  ctx.fillRect(x + 15*s, y + 35*s, 5*s, 3*s);
+
+  ctx.restore();
+}
+
+// Draw HEMERA — golden/warm, clean bright look, lighter hair
+export function drawHemera(ctx: CanvasRenderingContext2D, x: number, y: number, frame: "idle" | "typing", scale: number) {
+  const s = scale;
+  ctx.save();
+
+  // === HAIR (golden, shorter/tidier than NYX) ===
+  ctx.fillStyle = "#f59e0b";
+  roundRect(ctx, x + 8*s, y + 0*s, 12*s, 4*s, 2*s);
+  ctx.fill();
+  ctx.fillRect(x + 7*s, y + 2*s, 14*s, 5*s);
+  // Hair sides (shorter)
+  ctx.fillStyle = "#d97706";
+  ctx.fillRect(x + 6*s, y + 4*s, 3*s, 8*s);
+  ctx.fillRect(x + 19*s, y + 4*s, 3*s, 8*s);
+  // Highlights
+  ctx.fillStyle = "#fbbf24";
+  ctx.fillRect(x + 10*s, y + 1*s, 3*s, 2*s);
+  ctx.fillRect(x + 16*s, y + 2*s, 2*s, 2*s);
+
+  // === HEAD ===
+  ctx.fillStyle = "#fef3c7"; // warm pale skin
+  roundRect(ctx, x + 9*s, y + 4*s, 10*s, 10*s, 2*s);
+  ctx.fill();
+
+  // === EYES (warm amber) ===
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x + 11*s, y + 7*s, 3*s, 2*s);
+  ctx.fillRect(x + 16*s, y + 7*s, 3*s, 2*s);
+  ctx.fillStyle = "#ea580c";
+  ctx.fillRect(x + 12*s, y + 7*s, 2*s, 2*s);
+  ctx.fillRect(x + 17*s, y + 7*s, 2*s, 2*s);
+  ctx.fillStyle = "#451a03";
+  ctx.fillRect(x + 12*s, y + 8*s, 1*s, 1*s);
+  ctx.fillRect(x + 17*s, y + 8*s, 1*s, 1*s);
+
+  // === MOUTH ===
+  ctx.fillStyle = "#e8c4a0";
+  ctx.fillRect(x + 13*s, y + 11*s, 3*s, 1*s);
+
+  // === BODY (clean light top) ===
+  ctx.fillStyle = "#d97706"; // amber top
+  roundRect(ctx, x + 7*s, y + 14*s, 14*s, 12*s, 2*s);
+  ctx.fill();
+  // Collar detail
+  ctx.fillStyle = "#fbbf24";
+  ctx.fillRect(x + 11*s, y + 14*s, 6*s, 2*s);
+  // Button/detail
+  ctx.fillStyle = "#b45309";
+  ctx.fillRect(x + 13*s, y + 18*s, 2*s, 1*s);
+  ctx.fillRect(x + 13*s, y + 21*s, 2*s, 1*s);
+
+  // === ARMS ===
+  ctx.fillStyle = "#d97706";
+  if (frame === "typing") {
+    ctx.fillRect(x + 5*s, y + 16*s, 3*s, 8*s);
+    ctx.fillRect(x + 20*s, y + 16*s, 3*s, 8*s);
+    ctx.fillRect(x + 4*s, y + 23*s, 4*s, 3*s);
+    ctx.fillRect(x + 20*s, y + 23*s, 4*s, 3*s);
+    ctx.fillStyle = "#fef3c7";
+    ctx.fillRect(x + 4*s, y + 25*s, 3*s, 2*s);
+    ctx.fillRect(x + 21*s, y + 25*s, 3*s, 2*s);
+  } else {
+    ctx.fillRect(x + 5*s, y + 16*s, 3*s, 9*s);
+    ctx.fillRect(x + 20*s, y + 16*s, 3*s, 9*s);
+    ctx.fillStyle = "#fef3c7";
+    ctx.fillRect(x + 5*s, y + 24*s, 3*s, 2*s);
+    ctx.fillRect(x + 20*s, y + 24*s, 3*s, 2*s);
+  }
+
+  // === LEGS ===
+  ctx.fillStyle = "#78350f";
+  ctx.fillRect(x + 9*s, y + 26*s, 4*s, 10*s);
+  ctx.fillRect(x + 15*s, y + 26*s, 4*s, 10*s);
+
+  // === SHOES ===
+  ctx.fillStyle = "#451a03";
+  ctx.fillRect(x + 8*s, y + 35*s, 5*s, 3*s);
+  ctx.fillRect(x + 15*s, y + 35*s, 5*s, 3*s);
+
+  ctx.restore();
+}
+
+// Render the right character based on sprite ID
 export function renderSprite(
   ctx: CanvasRenderingContext2D,
   sprite: SpriteData,
   frame: string,
   x: number,
   y: number,
-  scale: number = 2
+  scale: number = 3
 ) {
-  const data = sprite.frames[frame];
-  if (!data) return;
-
-  for (let row = 0; row < data.length; row++) {
-    for (let col = 0; col < data[row].length; col++) {
-      const colorIdx = data[row][col];
-      if (colorIdx === 0) continue;
-      const color = sprite.palette[colorIdx];
-      if (!color || color === "transparent") continue;
-      ctx.fillStyle = color;
-      ctx.fillRect(x + col * scale, y + row * scale, scale, scale);
-    }
+  const drawFrame = (frame === "typing" ? "typing" : "idle") as "idle" | "typing";
+  if (sprite.id === "nyx") {
+    drawNyx(ctx, x, y, drawFrame, scale);
+  } else if (sprite.id === "hemera") {
+    drawHemera(ctx, x, y, drawFrame, scale);
   }
+}
+
+// Helper for rounded rectangles
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
 }

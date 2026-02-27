@@ -150,22 +150,24 @@ export function drawAgent(
   // Draw sprite
   renderSprite(ctx, agent.sprite, agent.frame, agent.x, agent.y, scale);
 
-  // Draw blink overlay (draw skin-colored rectangles over eyes when blinking)
+  // Blink overlay — draw skin-colored bars over eyes
   if (agent.isBlinking) {
     const eyeColor = agent.id === "nyx" ? "#e0d0ff" : "#fef3c7";
-    // Eyes are roughly at row 8-9, cols 11-12 and 17-18 in the 32x32 sprite
     ctx.fillStyle = eyeColor;
-    ctx.fillRect(agent.x + 11 * scale, agent.y + 8 * scale, 2 * scale, 2 * scale);
-    ctx.fillRect(agent.x + 17 * scale, agent.y + 8 * scale, 2 * scale, 2 * scale);
+    // Eye positions relative to procedural drawing
+    ctx.fillRect(agent.x + 11 * scale, agent.y + 7 * scale, 3 * scale, 2 * scale);
+    ctx.fillRect(agent.x + 16 * scale, agent.y + 7 * scale, 3 * scale, 2 * scale);
   }
 
-  // Active agent: draw typing effect particles near hands
+  // Typing sparkle particles
   if (agent.status === "active" && agent.frame === "typing") {
     const sparkle = Math.sin(agent.typingTimer * 0.3) > 0.5;
     if (sparkle) {
-      const sparkColor = agent.id === "nyx" ? "rgba(124, 58, 237, 0.6)" : "rgba(251, 191, 36, 0.6)";
+      const sparkColor = agent.id === "nyx" ? "rgba(124, 58, 237, 0.5)" : "rgba(251, 191, 36, 0.5)";
       ctx.fillStyle = sparkColor;
-      ctx.fillRect(agent.x + spriteW / 2 - 8 + Math.random() * 16, agent.y + spriteH * 0.6, 2, 2);
+      const sx = agent.x + spriteW / 2 - 10 + Math.random() * 20;
+      const sy = agent.y + spriteH * 0.62 + Math.random() * 4;
+      ctx.fillRect(sx, sy, 2, 2);
     }
   }
 

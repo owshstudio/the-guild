@@ -8,6 +8,7 @@ import {
   drawEnvironment,
   drawDesks,
   drawAmbientEffects,
+  drawLoki,
 } from "./office-map";
 import {
   AgentEntity,
@@ -41,14 +42,17 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
     // Layer 2: Agent desks (with monitors)
     drawDesks(ctx, time);
 
-    // Layer 3: Agents
+    // Layer 3: LOKI the cat 🐱
+    drawLoki(ctx, time);
+
+    // Layer 4: Agents
     const agentEntities = agentsRef.current;
     agentEntities.forEach((agent) => {
       updateAgent(agent, time);
       drawAgent(ctx, agent, OFFICE.scale);
     });
 
-    // Layer 4: Hover tooltip (on top of agents)
+    // Layer 5: Hover tooltip (on top of agents)
     if (hoveredRef.current) {
       const agent = agentEntities.find((a) => a.id === hoveredRef.current);
       if (agent) {
@@ -56,7 +60,7 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
       }
     }
 
-    // Layer 5: Ambient effects (particles, glow)
+    // Layer 6: Ambient effects (particles, glow)
     drawAmbientEffects(ctx, time);
 
     timeRef.current += 1;
@@ -158,7 +162,7 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
         className="rounded-xl border border-[#1f1f1f] w-full"
         style={{
           imageRendering: "pixelated",
-          maxWidth: "960px",
+          maxWidth: "1440px",
           background: "#08080c",
         }}
       />

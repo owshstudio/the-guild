@@ -127,7 +127,7 @@ export default function Sidebar() {
             <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#DF4F15] to-[#A326B5]" />
             <div>
               <p className="text-xs font-medium text-[#d4d4d4]">Guild Admin</p>
-              <p className="text-[10px] text-[#525252]">v0.1.0</p>
+              <p className="text-[10px] text-[#525252]">v0.5.0</p>
               <p
                 className="text-[10px] font-semibold uppercase tracking-wider"
                 style={{ color: dataSource === "live" ? "#22c55e" : "#eab308" }}

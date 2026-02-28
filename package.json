@@ -1,6 +1,6 @@
 {
   "name": "@owshstudio/the-guild",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "bin": {
     "the-guild": "./bin/cli.mjs"
   },

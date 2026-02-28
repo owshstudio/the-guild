@@ -351,7 +351,7 @@ export default function SettingsPage() {
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#737373]">Version</span>
-              <span className="font-mono text-sm text-[#e5e5e5]">v0.1.0</span>
+              <span className="font-mono text-sm text-[#e5e5e5]">v0.5.0</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#737373]">Dashboard</span>

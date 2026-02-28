@@ -1,12 +1,81 @@
 "use client";
 
+import { useMemo } from "react";
 import type { SessionMessage } from "@/lib/types";
+
+// Lightweight inline markdown → JSX (bold, italic, code, links)
+function renderMarkdown(text: string): React.ReactNode[] {
+  const lines = text.split("\n");
+  return lines.map((line, li) => {
+    // Process inline markdown within each line
+    const parts: React.ReactNode[] = [];
+    // Regex: code, bold, italic, links
+    const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[[^\]]+\]\([^)]+\))/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = re.exec(line)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(line.slice(lastIndex, match.index));
+      }
+      const m = match[0];
+      if (m.startsWith("`")) {
+        parts.push(
+          <code key={`${li}-${match.index}`} className="rounded bg-[#1f1f1f] px-1 py-0.5 font-mono text-xs text-[#e5a0e0]">
+            {m.slice(1, -1)}
+          </code>
+        );
+      } else if (m.startsWith("**")) {
+        parts.push(
+          <strong key={`${li}-${match.index}`} className="font-semibold text-[#e5e5e5]">
+            {m.slice(2, -2)}
+          </strong>
+        );
+      } else if (m.startsWith("*")) {
+        parts.push(
+          <em key={`${li}-${match.index}`} className="italic text-[#d4d4d4]">
+            {m.slice(1, -1)}
+          </em>
+        );
+      } else if (m.startsWith("[")) {
+        const linkMatch = m.match(/\[([^\]]+)\]\(([^)]+)\)/);
+        if (linkMatch) {
+          parts.push(
+            <a key={`${li}-${match.index}`} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="text-[#DF4F15] underline">
+              {linkMatch[1]}
+            </a>
+          );
+        }
+      }
+      lastIndex = match.index + m.length;
+    }
+
+    if (lastIndex < line.length) {
+      parts.push(line.slice(lastIndex));
+    }
+
+    // Return line with newlines between
+    return (
+      <span key={li}>
+        {parts.length > 0 ? parts : line}
+        {li < lines.length - 1 && "\n"}
+      </span>
+    );
+  });
+}
 
 interface MessageBubbleProps {
   message: SessionMessage;
 }
 
 export default function MessageBubble({ message }: MessageBubbleProps) {
+  const hasContent = message.content && message.content.trim().length > 0;
+
+  // Skip rendering empty assistant messages (tool-only turns)
+  if (!hasContent && message.role === "assistant" && !message.thinking) {
+    return null;
+  }
+
   if (message.role === "system") {
     return (
       <div className="flex justify-center py-2">
@@ -19,6 +88,10 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   }
 
   const isUser = message.role === "user";
+  const rendered = useMemo(
+    () => (hasContent ? renderMarkdown(message.content) : null),
+    [hasContent, message.content]
+  );
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} py-1.5`}>
@@ -45,7 +118,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
           )}
         </div>
         <p className="whitespace-pre-wrap break-words text-sm text-[#d4d4d4]">
-          {message.content || (message.toolCalls?.length ? "[tool calls]" : "[empty]")}
+          {rendered || (message.toolCalls?.length ? "[tool calls]" : "[no content]")}
         </p>
         {message.thinking && (
           <details className="mt-2">

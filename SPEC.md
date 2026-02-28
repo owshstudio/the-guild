@@ -4,7 +4,7 @@
 
 A Next.js 16 web app for managing AI agents running on OpenClaw. Dark theme, premium feel. Two layers: functional management pages + a pixel art virtual office where agents are visualized as animated characters.
 
-**Current state**: Feature-complete through Phase 5 + "Make It Real" dynamic agent refactor. 146 source files, 14 page routes, 19 API routes. All agents discovered dynamically from `~/.openclaw/agents/` — no hardcoded agent list. Build passes.
+**Current state**: v0.5.0 — feature-complete with chat interface, CLI/Docker distribution, API auth, and polish pass. 162 source files, 15 page routes, 24 API routes, 20 data hooks. All agents discovered dynamically from `~/.openclaw/agents/` — no hardcoded agent list. Build passes (40 static/dynamic routes).
 
 ## Stack
 
@@ -20,7 +20,7 @@ A Next.js 16 web app for managing AI agents running on OpenClaw. Dark theme, pre
 
 - Dark theme (near-black bg: `#0a0a0a`, cards: `#141414`, borders: `#1f1f1f`, text: `#e5e5e5`, muted: `#737373`)
 - Accent gradient: orange `#DF4F15` → magenta `#F9425F` → purple `#A326B5` (OWSH brand)
-- Clean sidebar nav with 12 items, modern SaaS aesthetic
+- Clean sidebar nav with 13 items, modern SaaS aesthetic
 - Font: Geist Sans + Geist Mono
 - Toast notifications (bottom-right stack, auto-dismiss 4s)
 
@@ -33,6 +33,7 @@ Logo: "The Guild" with pixel shield icon. Nav items with SVG icons:
 | Nav Item | Route | Description |
 |----------|-------|-------------|
 | Guild | `/guild` | Pixel art office (home/default page) |
+| Chat | `/chat` | Chat interface with agent selection + session resume |
 | Agents | `/agents` | Agent roster + team grouping |
 | Activity | `/activity` | Reverse-chronological event feed |
 | Sessions | `/sessions` | Live session viewer (two-panel) |
@@ -61,6 +62,17 @@ Bottom: Settings link.
 - Click agent → slide-out panel with quick info + Send Task button + Kill button
 - **Character creator**: slide-out panel with color pickers (skin, hair, shirt, pants, shoes), 4 hair styles, 5 outfit presets
 - **Edit mode**: toggle to drag-and-drop agents to reassign desks
+
+### /chat
+
+- **Agent pill bar** (top): horizontal scroll, emoji + name on desktop, emoji-only on mobile, `aria-label` for accessibility
+- **Session drawer**: toggle to see recent sessions sorted by recency, click to resume
+- **Message thread**: real-time SSE streaming, auto-scroll, optimistic user messages
+- **MessageBubble**: inline markdown rendering (bold, italic, code, links), empty assistant messages (tool-only turns) hidden
+- **Loading states**: `isLoadingSession` spinner when resuming a session, streaming indicator with pulse animation
+- **Agent switching**: EventSource cleanup on agent change (prevents connection leaks)
+- **Input**: auto-resize textarea, `Cmd+Enter` to send, disabled when no agent selected or streaming
+- **Mobile**: `h-[calc(100vh-56px)]` to match 56px top bar, `scrollbar-none` on pill bar
 
 ### /agents
 
@@ -166,40 +178,62 @@ All routes under `/api/gateway/`. Response format: `{ data, source: "live" | "mo
 - **Mock mode**: returns generic demo data from `src/lib/mock-data.ts` (single "Demo Agent"). Only shown when OpenClaw is not installed — never when installed but empty.
 - **Dynamic agent discovery**: `agent-builder.ts` scans `~/.openclaw/agents/` subdirectories, reads identity/soul/tools per agent, generates deterministic colors
 - **Configurable**: `OPENCLAW_DIR` env var for non-standard install paths, `GATEWAY_PORT` for port override
+- **Auth**: `GUILD_API_TOKEN` env var — when set, all `/api/gateway/*` requests require `Authorization: Bearer <token>` header or `guild_token` cookie (for SSE). When unset, auth is skipped (backwards compatible).
+- **Auth middleware**: `src/proxy.ts` (Next.js 16 proxy, not middleware.ts) — checks header then cookie fallback
 - **WebSocket proxy**: dispatch and actions use server-side WS to gateway (auth token stays server-side)
+- **SSE streaming**: `/api/gateway/sessions/[id]/stream` for real-time session events (used by Chat and Guild pages)
 - **Polling**: client hooks use `setInterval` (3s-60s depending on feature urgency)
+
+## CLI & Distribution
+
+- **CLI entry point**: `bin/cli.mjs` — `npx @owshstudio/the-guild` or `node bin/cli.mjs`
+- **Flags**: `--port <number>`, `--lan` (bind 0.0.0.0), `--dev` (Turbopack dev mode)
+- **Production mode**: `process.chdir()` into `.next/standalone/` before importing `server.js`
+- **Dev mode**: spawns `npx next dev` with `env: process.env` for custom env var passthrough
+- **Docker**: `Dockerfile` (multi-stage build) + `docker-compose.yml` with `~/.openclaw` volume mount
+- **npm publish**: `.npmignore` keeps `bin/`, `.next/standalone/`, `.next/static/`, `public/`, excludes `src/`
 
 ## Data Hooks
 
-All hooks in `src/lib/data/`:
+All hooks in `src/lib/data/` (20 hooks + 2 support files):
 
 | Hook | Poll Interval | Purpose |
 |------|--------------|---------|
 | `useAgents` | 15s | Agent list with status |
 | `useActivity` | 15s | Activity feed |
+| `useChat` | SSE stream | Chat with agents (send/receive, session resume) |
 | `useSessions` | 15s | Session list |
 | `useSessionDetail` | 3s active, 30s inactive | Single session messages |
 | `useGatewayStatus` | 30s | Gateway health |
 | `useUsage` | 60s | Token usage |
+| `useCosts` | 60s | Cost aggregation |
+| `useBudget` | localStorage | Budget config + alerts |
+| `useTasks` | 15s | Kanban task board |
 | `useCron` | 30s | Cron jobs |
 | `useWebhooks` | 60s | Webhook configs + delivery log |
 | `useTeams` | 30s | Agent teams |
 | `useComms` | 15s | Cross-agent messages |
 | `useHitl` | 10s | HITL queue |
-| `useCosts` | 60s | Cost aggregation |
-| `useBudget` | localStorage | Budget config + alerts |
 | `useChains` | 15s (+ 30s check) | Task chains |
 | `useDispatch` | on-demand | Dispatch task to agent |
 | `useActions` | on-demand | Quick actions (abort, restart, etc.) |
+| `useEventSource` | SSE stream | Reusable SSE connection hook |
+| `useToasts` | — | Toast notification state |
+
+Support files: `data-provider.tsx` (live/mock context), `sse-manager.ts` (SSE connection lifecycle).
 
 ## File Structure
 
 ```
+bin/
+  cli.mjs                              # CLI entry point (npx @owshstudio/the-guild)
 src/
+  proxy.ts                             # Next.js 16 auth proxy (Bearer token + cookie fallback)
   app/
     layout.tsx                          # Root layout: providers + sidebar + banners
     page.tsx                            # Redirects to /guild
     guild/page.tsx                      # Pixel art office
+    chat/page.tsx                       # Chat interface with agent selection
     agents/page.tsx                     # Agent roster + teams toggle
     activity/page.tsx                   # Activity feed
     sessions/page.tsx                   # Two-panel session viewer
@@ -211,11 +245,13 @@ src/
     cron/page.tsx                       # Cron editor
     webhooks/page.tsx                   # Webhook configurator
     chains/page.tsx                     # Task chain builder
-    settings/page.tsx                   # Settings
-    api/gateway/                        # 19 API routes (see API section)
+    settings/page.tsx                   # Settings + auth token + network info
+    api/gateway/                        # 24 API routes (18 feature endpoints + 6 action routes)
+    api/auth/                           # Login endpoint (sets guild_token cookie)
   components/
-    sidebar.tsx                         # 12-item navigation sidebar
+    sidebar.tsx                         # 13-item navigation sidebar
     gateway-banner.tsx                  # Gateway status banner
+    gateway-provider.tsx                # Live/mock data source provider
     toast-provider.tsx                  # Toast context + auto-dismiss
     toast-container.tsx                 # Fixed bottom-right toast stack
     actions/                            # Quick action buttons, confirm dialogs
@@ -229,13 +265,19 @@ src/
     dispatch/                           # Cmd+K modal, agent selector
     hitl/                               # HITL queue, actions, notifications
     pixel-office/                       # Canvas, sprites, rooms, pathfinding
-    sessions/                           # Session viewer, messages, tool blocks
+    sessions/                           # Session viewer, message bubbles, tool blocks
     tasks/                              # Kanban board
     teams/                              # Team cards, editor, metrics
     webhooks/                           # Webhook list, modal, delivery log
   lib/
-    data/                               # 17 React hooks (polling-based)
-    gateway/                            # Server-side readers, parsers, writers
+    data/                               # 20 React hooks + 2 support files (see Data Hooks)
+      data-provider.tsx                 # Live/mock context provider
+      sse-manager.ts                    # SSE connection lifecycle manager
+      use-chat.ts                       # Chat hook (SSE streaming, session resume)
+      use-agents.ts                     # Agent list with polling
+      use-tasks.ts                      # Kanban task state
+      ...                               # 17 more hooks (see Data Hooks table)
+    gateway/                            # Server-side readers, parsers, writers (22 files)
       agent-builder.ts                  # Dynamic agent discovery from ~/.openclaw/agents/
       filesystem.ts                     # Low-level filesystem readers (sessions, identity, tools)
       config.ts                         # OpenClaw config + OPENCLAW_DIR/GATEWAY_PORT env vars
@@ -244,11 +286,24 @@ src/
       usage-aggregator.ts              # Per-agent daily token aggregation
       activity-builder.ts              # Activity feed from sessions (all agents)
       cost-calculator.ts               # Per-agent cost estimation
+      model-costs.ts                   # Model pricing table for cost calculation
       comms-builder.ts                 # Cross-agent communication scanner (all agents)
       hitl-manager.ts                  # HITL queue + pattern scanner (all agents)
       teams-manager.ts                 # Team CRUD (JSON file storage)
+      task-store.ts                    # Kanban task persistence
+      chain-engine.ts                  # Task chain execution engine
+      cron-writer.ts                   # Cron job file writer (atomic .tmp + rename)
+      webhook-store.ts                 # Webhook config persistence
+      webhook-dispatcher.ts            # Webhook delivery + HMAC-SHA256 signing
+      ws-client.ts                     # Server-side WebSocket client for gateway
+      health.ts                        # Gateway health check
+      validate.ts                      # Input validation helpers
+      file-watcher.ts                  # Filesystem change detection
+      office-config.ts                 # Pixel office desk/room configuration
     types.ts                            # ~350 lines of shared TypeScript types
     mock-data.ts                        # Generic demo data (single "Demo Agent")
+    settings.ts                         # Settings load/save (localStorage)
+    gateway.ts                          # Client-side gateway health check
     constants.ts                        # Colors, config
 ```
 
@@ -264,3 +319,5 @@ src/
 - **v0.1 (Phases 1-3)**: Core shell, pixel office (single room), gateway integration, sprite polish
 - **v0.2 (Phases 4-5)**: Toast system, sessions, dispatch, cron, webhooks, multi-room office, character creator, teams, comms, HITL, budget, chains
 - **v0.3 (Make It Real)**: Dynamic N-agent discovery, removed all hardcoded NYX/HEMERA references, env configuration (`OPENCLAW_DIR`, `GATEWAY_PORT`), mock/live detection, README + `.env.example`, generic demo data fallback
+- **v0.4 (Chat + Mobile)**: Chat page with SSE streaming, agent pill bar, session resume drawer, inline markdown rendering (bold/italic/code/links), mobile-responsive layout, kanban task board, guild page wiring
+- **v0.5 (Ship-Ready)**: CLI distribution (`bin/cli.mjs` with `--port`, `--lan`, `--dev`), Docker support, API auth (`GUILD_API_TOKEN` + `proxy.ts`), `.npmignore` for npm publish, EventSource leak fixes (chat agent switch + guild page unmount), session load error handling, `isLoadingSession` state, accessibility (aria-labels, viewBox fix), `scrollbar-none` CSS utility, mobile height fix (56px top bar), sessions page flex fix, message bubble polish (empty message filtering, markdown rendering), version bump to 0.5.0

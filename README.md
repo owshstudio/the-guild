@@ -88,8 +88,18 @@ If OpenClaw isn't installed, the dashboard shows generic demo data so you can ex
 | `OPENCLAW_DIR` | `~/.openclaw` | Path to OpenClaw data directory |
 | `GATEWAY_PORT` | Read from `openclaw.json`, fallback `18789` | OpenClaw gateway port (server-side) |
 | `NEXT_PUBLIC_GATEWAY_PORT` | `18789` | Gateway port for browser health checks |
+| `GUILD_API_TOKEN` | unset | API auth token -- when set, all API requests require `Authorization: Bearer <token>` |
 
 Copy `.env.example` to `.env` and uncomment any overrides you need.
+
+### API Authentication
+
+When `GUILD_API_TOKEN` is set on the server, all `/api/gateway/*` requests require authentication. Two methods:
+
+1. **Header**: `Authorization: Bearer <your-token>` (for API clients)
+2. **Cookie**: `guild_token` httpOnly cookie (for browser/SSE streams)
+
+To authenticate in the browser, go to **Settings** and enter your token. This sets the cookie for the session. When `GUILD_API_TOKEN` is not set, auth is skipped entirely (backwards compatible).
 
 ## Multi-Machine Setup
 

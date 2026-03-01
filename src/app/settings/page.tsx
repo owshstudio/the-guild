@@ -5,6 +5,7 @@ import { loadSettings, saveSettings, type GuildSettings } from "@/lib/settings";
 import { useAgents } from "@/lib/data/use-agents";
 import { useToasts } from "@/components/toast-provider";
 import { checkGatewayHealth } from "@/lib/gateway";
+import { APP_VERSION } from "@/lib/version";
 
 function useNetworkInfo() {
   const [lanIp, setLanIp] = useState<string | null>(null);
@@ -349,7 +350,7 @@ export default function SettingsPage() {
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#737373]">Version</span>
-              <span className="font-mono text-sm text-[#e5e5e5]">v0.5.0</span>
+              <span className="font-mono text-sm text-[#e5e5e5]">{APP_VERSION}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#737373]">Dashboard</span>

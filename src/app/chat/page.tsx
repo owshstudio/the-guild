@@ -7,6 +7,7 @@ import { useSessions } from "@/lib/data/use-sessions";
 import MessageBubble from "@/components/sessions/message-bubble";
 import ToolCallBlock from "@/components/sessions/tool-call-block";
 import { AnimatePresence, motion } from "framer-motion";
+import { getModKey } from "@/lib/utils/platform";
 
 export default function ChatPage() {
   const { agents } = useAgents();
@@ -26,10 +27,19 @@ export default function ChatPage() {
 
   const [input, setInput] = useState("");
   const [showSessions, setShowSessions] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevCountRef = useRef(0);
+
+  const copySessionId = useCallback(() => {
+    if (!activeSessionId) return;
+    navigator.clipboard.writeText(activeSessionId).then(() => {
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 1500);
+    });
+  }, [activeSessionId]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -71,6 +81,7 @@ export default function ChatPage() {
   );
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
+  const modKey = useMemo(() => getModKey(), []);
 
   // Show recent sessions sorted by recency (API already returns them sorted)
   const recentSessions = useMemo(() => sessions.slice(0, 8), [sessions]);
@@ -219,12 +230,19 @@ export default function ChatPage() {
                 Chat with {selectedAgent?.name || "Agent"}
               </h2>
               <p className="mt-1 text-sm text-[#525252]">
-                {selectedAgent?.role || "Send a message to get started"}
+                {activeSessionId
+                  ? selectedAgent?.role || "Send a message to get started"
+                  : "No Guild session found — send a message to start one"}
               </p>
               {activeSessionId && (
-                <p className="mt-2 font-mono text-[10px] text-[#525252]">
-                  Session: {activeSessionId}
-                </p>
+                <button
+                  onClick={copySessionId}
+                  className="mt-2 font-mono text-[10px] text-[#525252] hover:text-[#737373] transition"
+                  title="Click to copy full session ID"
+                >
+                  Session: {activeSessionId.slice(0, 8)}&hellip;
+                  {copiedId && <span className="ml-1 text-[#22c55e]">Copied!</span>}
+                </button>
               )}
             </div>
           </div>
@@ -232,9 +250,14 @@ export default function ChatPage() {
           <>
             {activeSessionId && (
               <div className="mb-3 flex items-center justify-center">
-                <span className="rounded-full bg-[#141414] px-3 py-1 font-mono text-[10px] text-[#525252]">
-                  {activeSessionId}
-                </span>
+                <button
+                  onClick={copySessionId}
+                  className="rounded-full bg-[#141414] px-3 py-1 font-mono text-[10px] text-[#525252] hover:text-[#737373] transition"
+                  title="Click to copy full session ID"
+                >
+                  {activeSessionId.slice(0, 8)}&hellip;
+                  {copiedId && <span className="ml-1 text-[#22c55e]">Copied!</span>}
+                </button>
               </div>
             )}
 
@@ -246,7 +269,7 @@ export default function ChatPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <MessageBubble message={msg} />
+                  <MessageBubble message={msg} variant="chat" agentName={selectedAgent?.name} agentEmoji={selectedAgent?.emoji} />
                   {msg.toolCalls?.map((tc, i) => (
                     <div key={`${msg.id}-tool-${i}`} className="ml-4">
                       <ToolCallBlock toolCall={tc} />
@@ -295,7 +318,7 @@ export default function ChatPage() {
             onKeyDown={handleKeyDown}
             placeholder={
               selectedAgentId
-                ? `Message ${selectedAgent?.name || "agent"}... (⌘+Enter to send)`
+                ? `Message ${selectedAgent?.name || "agent"}... (${modKey}+Enter to send)`
                 : "Select an agent first"
             }
             disabled={!selectedAgentId || isStreaming}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { SessionDetail, SessionMessage } from "@/lib/types";
+import { sanitizeContent } from "@/lib/utils/content-sanitize";
 
 const PAGE_SIZE = 100;
 
@@ -62,18 +63,19 @@ export function useSessionDetail(sessionId: string | null) {
         // Convert JSONL entry to SessionMessage and append
         if (entry.type === "message" && entry.message) {
           const msg = entry.message;
+          const rawContent =
+            typeof msg.content === "string"
+              ? msg.content
+              : Array.isArray(msg.content)
+                ? msg.content
+                    .filter((b: { type: string }) => b.type === "text")
+                    .map((b: { text?: string }) => b.text || "")
+                    .join("\n")
+                : "";
           const newMessage: SessionMessage = {
             id: `${sessionId}-sse-${Date.now()}`,
             role: msg.role,
-            content:
-              typeof msg.content === "string"
-                ? msg.content
-                : Array.isArray(msg.content)
-                  ? msg.content
-                      .filter((b: { type: string }) => b.type === "text")
-                      .map((b: { text?: string }) => b.text || "")
-                      .join("\n")
-                  : "",
+            content: sanitizeContent(rawContent),
             timestamp: entry.timestamp,
             model: msg.model,
           };

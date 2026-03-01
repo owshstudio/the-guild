@@ -36,7 +36,7 @@ export default function SessionList({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search sessions..."
-          className="w-full rounded-lg border border-[#1f1f1f] bg-[#0a0a0a] px-3 py-2 text-sm text-[#d4d4d4] placeholder:text-[#525252] focus:border-[#2a2a2a] focus:outline-none"
+          className="w-full rounded-lg border border-[#1f1f1f] bg-[#0a0a0a] px-3 py-2 text-sm text-[#d4d4d4] placeholder:text-[#525252] focus:border-[#DF4F15] focus:outline-none"
         />
       </div>
 

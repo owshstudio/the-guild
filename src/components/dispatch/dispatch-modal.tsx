@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAgents } from "@/lib/data/use-agents";
 import { useToasts } from "@/components/toast-provider";
 import { AgentSelector } from "./agent-selector";
+import { getModKey } from "@/lib/utils/platform";
 
 interface DispatchModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export function DispatchModal({ isOpen, onClose, targetAgentId }: DispatchModalP
   const [isNewSession, setIsNewSession] = useState(true);
   const [isDispatching, setIsDispatching] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modKey = useMemo(() => getModKey(), []);
 
   useEffect(() => {
     if (targetAgentId) setSelectedAgentId(targetAgentId); // eslint-disable-line react-hooks/set-state-in-effect
@@ -30,6 +32,19 @@ export function DispatchModal({ isOpen, onClose, targetAgentId }: DispatchModalP
       textareaRef.current.focus();
     }
   }, [isOpen]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
@@ -70,6 +85,9 @@ export function DispatchModal({ isOpen, onClose, targetAgentId }: DispatchModalP
             onClick={onClose}
           />
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Dispatch task"
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
@@ -77,7 +95,7 @@ export function DispatchModal({ isOpen, onClose, targetAgentId }: DispatchModalP
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Dispatch Task</h2>
-              <span className="text-xs text-[#525252] font-mono">Cmd+K</span>
+              <span className="text-xs text-[#525252] font-mono">{modKey}+Enter</span>
             </div>
 
             <AgentSelector
@@ -124,7 +142,7 @@ export function DispatchModal({ isOpen, onClose, targetAgentId }: DispatchModalP
             />
 
             <div className="mt-4 flex items-center justify-between">
-              <span className="text-xs text-[#525252]">Cmd+Enter to send</span>
+              <span className="text-xs text-[#525252]">{modKey}+Enter to send</span>
               <div className="flex gap-2">
                 <button
                   onClick={onClose}

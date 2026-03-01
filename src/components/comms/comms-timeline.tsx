@@ -2,12 +2,14 @@
 
 import { motion } from "framer-motion";
 import type { CommMessage } from "@/lib/types";
-import CommsMessage from "./comms-message";
+import CommsMessage, { type AgentMeta } from "./comms-message";
 
 export default function CommsTimeline({
   messages,
+  agentMeta,
 }: {
   messages: CommMessage[];
+  agentMeta?: AgentMeta;
 }) {
   if (messages.length === 0) {
     return (
@@ -50,7 +52,7 @@ export default function CommsTimeline({
                   align === "left" ? "pr-8" : "ml-auto pl-8"
                 }`}
               >
-                <CommsMessage message={msg} align={align} />
+                <CommsMessage message={msg} align={align} agentMeta={agentMeta} />
               </div>
             </motion.div>
           );

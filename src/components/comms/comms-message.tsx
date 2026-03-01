@@ -3,9 +3,7 @@
 import { useState } from "react";
 import type { CommChannel, CommMessage } from "@/lib/types";
 
-const AGENT_META: Record<string, { name: string; emoji: string; color: string }> = {
-  noah: { name: "NOAH", emoji: "\u{1F468}\u200D\u{1F4BB}", color: "#3b82f6" },
-};
+export type AgentMeta = Record<string, { name: string; emoji: string; color: string }>;
 
 const CHANNEL_COLORS: Record<CommChannel, string> = {
   "whatsapp-group": "#22c55e",
@@ -75,12 +73,14 @@ function DeliveryIndicator({ status }: { status: string }) {
 export default function CommsMessage({
   message,
   align,
+  agentMeta,
 }: {
   message: CommMessage;
   align: "left" | "right";
+  agentMeta?: AgentMeta;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const agent = AGENT_META[message.fromAgentId] || {
+  const agent = agentMeta?.[message.fromAgentId] || {
     name: message.fromAgentId,
     emoji: "?",
     color: "#737373",

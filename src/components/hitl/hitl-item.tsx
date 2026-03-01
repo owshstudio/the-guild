@@ -113,7 +113,8 @@ export function HITLItemCard({ item, onRespond, onDismiss }: HITLItemProps) {
             <div className="mt-2">
               <button
                 onClick={() => setExpanded(!expanded)}
-                className="text-[11px] text-[#525252] transition hover:text-[#737373]"
+                aria-expanded={expanded}
+                className="rounded-md px-2 py-1 text-[11px] text-[#525252] transition hover:bg-white/[0.04] hover:text-[#737373]"
               >
                 {expanded ? "Hide context" : "Show context"}
               </button>

@@ -64,7 +64,10 @@ export default function SessionsPage() {
           </div>
         ) : isLoading ? (
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-[#525252]">Loading session...</p>
+            <div className="text-center">
+              <div className="mx-auto h-5 w-5 animate-spin rounded-full border-2 border-[#1f1f1f] border-t-[#DF4F15]" />
+              <p className="mt-3 text-sm text-[#525252]">Loading session...</p>
+            </div>
           </div>
         ) : session ? (
           <SessionViewer

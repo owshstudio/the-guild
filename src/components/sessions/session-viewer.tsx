@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { SessionDetail } from "@/lib/types";
 import SessionHeader from "./session-header";
@@ -23,6 +23,7 @@ export default function SessionViewer({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -34,11 +35,17 @@ export default function SessionViewer({
 
   // Load older messages on scroll up
   const handleScroll = useCallback(() => {
-    if (!scrollRef.current || !hasMore) return;
-    if (scrollRef.current.scrollTop === 0) {
+    if (!scrollRef.current || !hasMore || isLoadingMore) return;
+    if (scrollRef.current.scrollTop <= 5) {
+      setIsLoadingMore(true);
       onLoadMore();
     }
-  }, [hasMore, onLoadMore]);
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
+  // Reset loading state when messages change (load completed)
+  useEffect(() => {
+    setIsLoadingMore(false); // eslint-disable-line react-hooks/set-state-in-effect -- reset after data arrives
+  }, [session.messages.length]);
 
   return (
     <div className="flex h-full flex-col">
@@ -51,10 +58,14 @@ export default function SessionViewer({
       >
         {hasMore && (
           <button
-            onClick={onLoadMore}
-            className="mb-4 w-full rounded-lg border border-[#1f1f1f] bg-[#0e0e0e] py-2 text-xs text-[#525252] transition-colors hover:bg-[#141414] hover:text-[#737373]"
+            onClick={() => {
+              setIsLoadingMore(true);
+              onLoadMore();
+            }}
+            disabled={isLoadingMore}
+            className="mb-4 w-full rounded-lg border border-[#1f1f1f] bg-[#0e0e0e] py-2 text-xs text-[#525252] transition-colors hover:bg-[#141414] hover:text-[#737373] disabled:opacity-50"
           >
-            Load older messages
+            {isLoadingMore ? "Loading..." : "Load older messages"}
           </button>
         )}
 

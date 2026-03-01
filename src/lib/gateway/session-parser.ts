@@ -1,5 +1,6 @@
 import { readFile, stat } from "fs/promises";
 import { listSessions } from "./filesystem";
+import { sanitizeContent } from "@/lib/utils/content-sanitize";
 
 export interface SessionMessage {
   role: "user" | "assistant" | "system";
@@ -202,14 +203,18 @@ export async function parseSession(
 }
 
 function extractContent(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
+  let raw: string;
+  if (typeof content === "string") {
+    raw = content;
+  } else if (Array.isArray(content)) {
+    raw = content
       .filter((block) => block.type === "text")
       .map((block) => block.text || "")
       .join("\n");
+  } else {
+    raw = "";
   }
-  return "";
+  return sanitizeContent(raw);
 }
 
 function extractToolCalls(

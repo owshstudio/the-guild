@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { SessionMessage, SessionDetail } from "@/lib/types";
+import { sanitizeContent } from "@/lib/utils/content-sanitize";
 
 export function useChat() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -11,6 +12,7 @@ export function useChat() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const loadedAgentRef = useRef<string | null>(null);
 
   // Close any open EventSource
   const closeSSE = useCallback(() => {
@@ -26,12 +28,49 @@ export function useChat() {
     return closeSSE;
   }, [closeSSE]);
 
-  // Reset state when switching agents
+  // When agent changes, auto-load the Guild session for that agent
   useEffect(() => {
     closeSSE();
-    setActiveSessionId(null);
-    setMessages([]);
     setError(null);
+
+    if (!selectedAgentId) {
+      setActiveSessionId(null);
+      setMessages([]);
+      return;
+    }
+
+    // Avoid reloading if we already loaded this agent's session
+    if (loadedAgentRef.current === selectedAgentId) return;
+    loadedAgentRef.current = selectedAgentId;
+
+    setIsLoadingSession(true);
+    setMessages([]);
+    setActiveSessionId(null);
+
+    fetch(`/api/gateway/guild-session?agentId=${encodeURIComponent(selectedAgentId)}`)
+      .then((r) => r.json())
+      .then((json) => {
+        const sessionId = json.data?.sessionId;
+        if (!sessionId) {
+          setIsLoadingSession(false);
+          return;
+        }
+
+        // Load the session's messages
+        return fetch(`/api/gateway/sessions/${sessionId}?offset=0&limit=200`)
+          .then((r) => r.json())
+          .then((sessionJson) => {
+            const detail = sessionJson.data as SessionDetail | undefined;
+            if (detail) {
+              setActiveSessionId(sessionId);
+              setMessages(detail.messages);
+            }
+            setIsLoadingSession(false);
+          });
+      })
+      .catch(() => {
+        setIsLoadingSession(false);
+      });
   }, [selectedAgentId, closeSSE]);
 
   // Open SSE stream for a session
@@ -50,18 +89,19 @@ export function useChat() {
           const entry = JSON.parse(event.data);
           if (entry.type === "message" && entry.message) {
             const msg = entry.message;
+            const rawContent =
+              typeof msg.content === "string"
+                ? msg.content
+                : Array.isArray(msg.content)
+                  ? msg.content
+                      .filter((b: { type: string }) => b.type === "text")
+                      .map((b: { text?: string }) => b.text || "")
+                      .join("\n")
+                  : "";
             const newMessage: SessionMessage = {
               id: `${sessionId}-sse-${Date.now()}`,
               role: msg.role,
-              content:
-                typeof msg.content === "string"
-                  ? msg.content
-                  : Array.isArray(msg.content)
-                    ? msg.content
-                        .filter((b: { type: string }) => b.type === "text")
-                        .map((b: { text?: string }) => b.text || "")
-                        .join("\n")
-                    : "",
+              content: sanitizeContent(rawContent),
               timestamp: entry.timestamp,
               model: msg.model,
             };

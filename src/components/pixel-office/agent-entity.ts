@@ -132,6 +132,36 @@ function getDesk(agentId: string) {
   return deskAssignments.find((d) => d.agentId === agentId);
 }
 
+/**
+ * Attempt to move an agent to a target tile. Only releases the current tile
+ * if a valid path is found; re-marks it occupied otherwise.
+ * Returns true if a path was set.
+ */
+function tryMoveTo(
+  agent: AgentEntity,
+  tilemap: TileMap,
+  targetCol: number,
+  targetRow: number,
+  adjacentMode = false
+): boolean {
+  tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
+  const path = findPath(
+    tilemap,
+    { col: agent.tileCol, row: agent.tileRow },
+    { col: targetCol, row: targetRow },
+    adjacentMode
+  );
+  if (path.length > 1) {
+    agent.path = path;
+    agent.pathIndex = 1;
+    agent.moveProgress = 0;
+    return true;
+  }
+  // No valid path — re-occupy the current tile
+  tilemap.setOccupied(agent.tileCol, agent.tileRow, true);
+  return false;
+}
+
 function facingFromDirection(
   fromCol: number,
   fromRow: number,
@@ -164,13 +194,7 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
   if (agent.status === "stopped") {
     // Always go back to desk and work
     if (desk && (agent.tileCol !== desk.chairCol || agent.tileRow !== desk.chairRow)) {
-      tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
-      const path = findPath(tilemap, { col: agent.tileCol, row: agent.tileRow }, { col: desk.chairCol, row: desk.chairRow });
-      if (path.length > 1) {
-        agent.path = path;
-        agent.pathIndex = 1;
-        agent.moveProgress = 0;
-      }
+      tryMoveTo(agent, tilemap, desk.chairCol, desk.chairRow);
     }
     agent.behavior = "working";
     agent.state = "typing";
@@ -183,18 +207,7 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
     const doorTile = findDoorTile(agent.currentRoom);
     if (doorTile) {
       agent.behavior = "room-transition";
-      tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
-      const path = findPath(
-        tilemap,
-        { col: agent.tileCol, row: agent.tileRow },
-        { col: doorTile.col, row: doorTile.row },
-        true // adjacentMode — walk to adjacent tile
-      );
-      if (path.length > 1) {
-        agent.path = path;
-        agent.pathIndex = 1;
-        agent.moveProgress = 0;
-      }
+      tryMoveTo(agent, tilemap, doorTile.col, doorTile.row, true);
       agent.behaviorTimer = randomRange(2, 4);
       return;
     }
@@ -205,13 +218,7 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
       // Working — go to chair
       agent.behavior = "working";
       if (desk && (agent.tileCol !== desk.chairCol || agent.tileRow !== desk.chairRow)) {
-        tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
-        const path = findPath(tilemap, { col: agent.tileCol, row: agent.tileRow }, { col: desk.chairCol, row: desk.chairRow });
-        if (path.length > 1) {
-          agent.path = path;
-          agent.pathIndex = 1;
-          agent.moveProgress = 0;
-        } else {
+        if (!tryMoveTo(agent, tilemap, desk.chairCol, desk.chairRow)) {
           agent.state = "typing";
         }
       } else {
@@ -221,18 +228,7 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
     } else if (roll < 0.9) {
       // Getting coffee
       agent.behavior = "getting-coffee";
-      tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
-      const path = findPath(
-        tilemap,
-        { col: agent.tileCol, row: agent.tileRow },
-        { col: COFFEE_MACHINE.col, row: COFFEE_MACHINE.row },
-        true // adjacentMode
-      );
-      if (path.length > 1) {
-        agent.path = path;
-        agent.pathIndex = 1;
-        agent.moveProgress = 0;
-      }
+      tryMoveTo(agent, tilemap, COFFEE_MACHINE.col, COFFEE_MACHINE.row, true);
       agent.behaviorTimer = randomRange(3, 5);
     } else {
       // Wandering
@@ -245,17 +241,7 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
         Math.floor(Math.random() * (WANDER_BOUNDS.maxRow - WANDER_BOUNDS.minRow + 1));
 
       if (tilemap.isWalkable(targetCol, targetRow)) {
-        tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
-        const path = findPath(
-          tilemap,
-          { col: agent.tileCol, row: agent.tileRow },
-          { col: targetCol, row: targetRow }
-        );
-        if (path.length > 1) {
-          agent.path = path;
-          agent.pathIndex = 1;
-          agent.moveProgress = 0;
-        }
+        tryMoveTo(agent, tilemap, targetCol, targetRow);
       }
       agent.behaviorTimer = randomRange(2, 4);
     }
@@ -265,13 +251,7 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
       // Sitting idle at desk
       agent.behavior = "sitting-idle";
       if (desk && (agent.tileCol !== desk.chairCol || agent.tileRow !== desk.chairRow)) {
-        tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
-        const path = findPath(tilemap, { col: agent.tileCol, row: agent.tileRow }, { col: desk.chairCol, row: desk.chairRow });
-        if (path.length > 1) {
-          agent.path = path;
-          agent.pathIndex = 1;
-          agent.moveProgress = 0;
-        }
+        tryMoveTo(agent, tilemap, desk.chairCol, desk.chairRow);
       }
       agent.state = "idle";
       agent.behaviorTimer = randomRange(5, 10);
@@ -286,17 +266,7 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
         Math.floor(Math.random() * (WANDER_BOUNDS.maxRow - WANDER_BOUNDS.minRow + 1));
 
       if (tilemap.isWalkable(targetCol, targetRow)) {
-        tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
-        const path = findPath(
-          tilemap,
-          { col: agent.tileCol, row: agent.tileRow },
-          { col: targetCol, row: targetRow }
-        );
-        if (path.length > 1) {
-          agent.path = path;
-          agent.pathIndex = 1;
-          agent.moveProgress = 0;
-        }
+        tryMoveTo(agent, tilemap, targetCol, targetRow);
       }
       agent.behaviorTimer = randomRange(2, 4);
     } else {
@@ -381,17 +351,7 @@ export function updateAgent(
       if (agent.behavior === "getting-coffee") {
         const desk = getDesk(agent.id);
         if (desk) {
-          tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
-          const path = findPath(
-            tilemap,
-            { col: agent.tileCol, row: agent.tileRow },
-            { col: desk.chairCol, row: desk.chairRow }
-          );
-          if (path.length > 1) {
-            agent.path = path;
-            agent.pathIndex = 1;
-            agent.moveProgress = 0;
-          }
+          tryMoveTo(agent, tilemap, desk.chairCol, desk.chairRow);
           agent.behavior = "working";
           agent.behaviorTimer = randomRange(8, 15);
           return;

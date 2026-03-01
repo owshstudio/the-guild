@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useDataSource } from "@/lib/data/data-provider";
 import { AnimatePresence, motion } from "framer-motion";
+import { APP_VERSION } from "@/lib/version";
 
 const navItems = [
   { href: "/guild", label: "Guild", icon: GuildIcon },
@@ -38,6 +39,7 @@ export default function Sidebar() {
       <div className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center gap-3 border-b border-[#1f1f1f] bg-[#0c0c0c] px-4 lg:hidden">
         <button
           onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation menu"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-[#a3a3a3] transition hover:bg-white/[0.05]"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -127,7 +129,7 @@ export default function Sidebar() {
             <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#DF4F15] to-[#A326B5]" />
             <div>
               <p className="text-xs font-medium text-[#d4d4d4]">Guild Admin</p>
-              <p className="text-[10px] text-[#525252]">v0.5.0</p>
+              <p className="text-[10px] text-[#525252]">{APP_VERSION}</p>
               <p
                 className="text-[10px] font-semibold uppercase tracking-wider"
                 style={{ color: dataSource === "live" ? "#22c55e" : "#eab308" }}

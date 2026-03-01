@@ -48,6 +48,7 @@ export default function TaskCard({
             e.stopPropagation();
             onDeleteTask(task.id);
           }}
+          aria-label={`Delete task: ${task.title}`}
           className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded text-[#525252] opacity-0 transition hover:bg-white/[0.06] hover:text-[#ef4444] group-hover:opacity-100"
           title="Delete task"
         >

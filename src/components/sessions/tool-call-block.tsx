@@ -15,6 +15,8 @@ export default function ToolCallBlock({ toolCall }: ToolCallBlockProps) {
     <div className="my-1 rounded-lg border border-[#1f1f1f] bg-[#0e0e0e]">
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-label={`Tool call: ${toolCall.name}`}
         className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[#141414]"
       >
         <svg

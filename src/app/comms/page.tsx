@@ -1,20 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useComms } from "@/lib/data/use-comms";
+import { useAgents } from "@/lib/data/use-agents";
 import CommsFilter from "@/components/comms/comms-filter";
 import CommsTimeline from "@/components/comms/comms-timeline";
+import type { AgentMeta } from "@/components/comms/comms-message";
 
 export default function CommsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [channel, setChannel] = useState("");
+  const { agents } = useAgents();
 
   const { messages, isLive, isLoading } = useComms({
     from: from || undefined,
     to: to || undefined,
     channel: channel || undefined,
   });
+
+  const agentMeta: AgentMeta = useMemo(() => {
+    const meta: AgentMeta = {};
+    for (const a of agents) {
+      meta[a.id] = { name: a.name, emoji: a.emoji, color: a.color };
+    }
+    return meta;
+  }, [agents]);
 
   return (
     <div className="min-h-screen p-6">
@@ -54,7 +65,7 @@ export default function CommsPage() {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1f1f1f] border-t-[#7c3aed]" />
         </div>
       ) : (
-        <CommsTimeline messages={messages} />
+        <CommsTimeline messages={messages} agentMeta={agentMeta} />
       )}
     </div>
   );

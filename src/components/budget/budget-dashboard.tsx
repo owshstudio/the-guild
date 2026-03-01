@@ -18,8 +18,25 @@ export function BudgetDashboard({ costs }: BudgetDashboardProps) {
     .filter((c) => c.date === today)
     .reduce((s, c) => s + c.estimatedCost, 0);
 
-  const weeklySpend = costs.reduce((s, c) => s + c.estimatedCost, 0);
-  const monthlySpend = weeklySpend;
+  // Compute week window (last 7 days)
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekKeys = new Set<string>();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    weekKeys.add(`${months[d.getMonth()]} ${d.getDate()}`);
+  }
+
+  const weeklySpend = costs
+    .filter((c) => weekKeys.has(c.date))
+    .reduce((s, c) => s + c.estimatedCost, 0);
+
+  // Monthly: all entries whose month matches current month
+  const currentMonth = months[now.getMonth()];
+  const monthlySpend = costs
+    .filter((c) => c.date.startsWith(currentMonth))
+    .reduce((s, c) => s + c.estimatedCost, 0);
 
   const yesterdayKey = (() => {
     const d = new Date(now);

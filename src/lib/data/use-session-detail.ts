@@ -14,14 +14,21 @@ export function useSessionDetail(sessionId: string | null) {
   const [hasMore, setHasMore] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const sseFailedRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
 
+    // Cancel any in-flight fetch
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       const offset = page * PAGE_SIZE;
       const res = await fetch(
-        `/api/gateway/sessions/${sessionId}?offset=${offset}&limit=${PAGE_SIZE}`
+        `/api/gateway/sessions/${sessionId}?offset=${offset}&limit=${PAGE_SIZE}`,
+        { signal: controller.signal }
       );
       const json = await res.json();
 
@@ -30,8 +37,9 @@ export function useSessionDetail(sessionId: string | null) {
         setIsLive(json.data.isActive);
         setHasMore(json.data.messages.length >= PAGE_SIZE);
       }
-    } catch {
-      // fetch error
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      // other fetch error — ignore
     }
 
     setIsLoading(false);
@@ -136,7 +144,10 @@ export function useSessionDetail(sessionId: string | null) {
 
   // Clean up on unmount
   useEffect(() => {
-    return closeSSE;
+    return () => {
+      closeSSE();
+      abortRef.current?.abort();
+    };
   }, [closeSSE]);
 
   return { session, isLoading, isLive, page, setPage, hasMore };

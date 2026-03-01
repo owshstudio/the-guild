@@ -91,7 +91,7 @@ export default function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="mt-4 flex flex-1 flex-col gap-1 px-3 overflow-y-auto">
+        <nav className="mt-4 flex flex-1 flex-col gap-1 px-3 overflow-y-auto scrollbar-none">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (

@@ -70,11 +70,21 @@ export function useHITL() {
 
   const respond = useCallback(
     async (id: string, response: string, status: HITLStatus) => {
-      await fetch("/api/gateway/hitl", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, response, status }),
-      });
+      // Optimistic update — immediately reflect the status change
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status, response } : item
+        )
+      );
+      try {
+        await fetch("/api/gateway/hitl", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, response, status }),
+        });
+      } catch {
+        // Revert on failure
+      }
       await fetchQueue();
     },
     [fetchQueue]
@@ -82,7 +92,13 @@ export function useHITL() {
 
   const dismiss = useCallback(
     async (id: string) => {
-      await fetch(`/api/gateway/hitl?id=${id}`, { method: "DELETE" });
+      // Optimistic update — remove from list immediately
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      try {
+        await fetch(`/api/gateway/hitl?id=${id}`, { method: "DELETE" });
+      } catch {
+        // Revert on failure
+      }
       await fetchQueue();
     },
     [fetchQueue]

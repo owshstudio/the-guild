@@ -47,6 +47,20 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deleteAfterRun, setDeleteAfterRun] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [dateWarning, setDateWarning] = useState("");
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     // Sync form state from editJob prop
@@ -162,6 +176,9 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
             onClick={onClose}
           />
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label={editJob ? "Edit cron job" : "New cron job"}
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
@@ -228,12 +245,24 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
                     ))}
                   </div>
                 ) : (
-                  <input
-                    type="datetime-local"
-                    value={atDatetime}
-                    onChange={(e) => setAtDatetime(e.target.value)}
-                    className={inputClass + " [color-scheme:dark]"}
-                  />
+                  <>
+                    <input
+                      type="datetime-local"
+                      value={atDatetime}
+                      onChange={(e) => {
+                        setAtDatetime(e.target.value);
+                        if (e.target.value && new Date(e.target.value) <= new Date()) {
+                          setDateWarning("Date is in the past — job will run immediately");
+                        } else {
+                          setDateWarning("");
+                        }
+                      }}
+                      className={inputClass + " [color-scheme:dark]"}
+                    />
+                    {dateWarning && (
+                      <p className="mt-1 text-xs text-yellow-500">{dateWarning}</p>
+                    )}
+                  </>
                 )}
               </div>
 

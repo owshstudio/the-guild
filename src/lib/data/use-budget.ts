@@ -34,14 +34,27 @@ export function useBudget(costs: AgentCostEntry[]) {
     if (!config.enabled) return;
 
     const now = new Date();
-    const today = `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.getMonth()]} ${now.getDate()}`;
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const today = `${months[now.getMonth()]} ${now.getDate()}`;
 
     const todaySpend = costs
       .filter((c) => c.date === today)
       .reduce((s, c) => s + c.estimatedCost, 0);
+    const weekKeys = new Set<string>();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      weekKeys.add(`${months[d.getMonth()]} ${d.getDate()}`);
+    }
 
-    const weeklySpend = costs.reduce((s, c) => s + c.estimatedCost, 0);
-    const monthlySpend = weeklySpend;
+    const weeklySpend = costs
+      .filter((c) => weekKeys.has(c.date))
+      .reduce((s, c) => s + c.estimatedCost, 0);
+
+    const currentMonth = months[now.getMonth()];
+    const monthlySpend = costs
+      .filter((c) => c.date.startsWith(currentMonth))
+      .reduce((s, c) => s + c.estimatedCost, 0);
 
     const newAlerts: BudgetAlert[] = [];
 

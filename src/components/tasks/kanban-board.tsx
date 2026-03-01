@@ -61,7 +61,7 @@ export default function KanbanBoard({
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
+    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
       {agents.map((agent) => {
         const orderedIds = taskOrderMap[agent.id] || [];
         const orderedTasks = orderedIds

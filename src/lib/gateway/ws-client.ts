@@ -83,7 +83,7 @@ export async function sendGatewayCommand(
                 version: "0.5.0",
                 platform: process.platform,
                 mode: "backend",
-                displayName: "The Guild Dashboard",
+                displayName: "The Guild",
                 instanceId: `guild-${Date.now()}`,
               },
               role: "operator",

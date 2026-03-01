@@ -31,6 +31,20 @@ export function WebhookModal({
   const [showSecret, setShowSecret] = useState(false);
   const [events, setEvents] = useState<WebhookEventType[]>([]);
   const [enabled, setEnabled] = useState(true);
+  const [urlError, setUrlError] = useState("");
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     // Sync form state from webhook prop
@@ -60,6 +74,23 @@ export function WebhookModal({
     );
   };
 
+  const validateUrl = (value: string) => {
+    if (!value.trim()) {
+      setUrlError("");
+      return;
+    }
+    try {
+      const parsed = new URL(value.trim());
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        setUrlError("URL must use http:// or https://");
+      } else {
+        setUrlError("");
+      }
+    } catch {
+      setUrlError("Invalid URL format");
+    }
+  };
+
   const handleSave = () => {
     const data: Partial<WebhookConfig> = {
       name: name.trim() || "Untitled Webhook",
@@ -87,6 +118,9 @@ export function WebhookModal({
             onClick={onClose}
           />
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label={webhook ? "Edit webhook" : "Add webhook"}
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
@@ -117,10 +151,20 @@ export function WebhookModal({
                 <input
                   type="url"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    validateUrl(e.target.value);
+                  }}
                   placeholder="https://example.com/webhook"
-                  className="w-full rounded-lg border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 font-mono text-sm text-[#e5e5e5] placeholder-[#525252] focus:border-[#DF4F15] focus:outline-none"
+                  className={`w-full rounded-lg border bg-[#0a0a0a] px-3 py-2 font-mono text-sm text-[#e5e5e5] placeholder-[#525252] focus:outline-none ${
+                    urlError
+                      ? "border-red-500/60 focus:border-red-500"
+                      : "border-[#2a2a2a] focus:border-[#DF4F15]"
+                  }`}
                 />
+                {urlError && (
+                  <p className="mt-1 text-xs text-red-400">{urlError}</p>
+                )}
               </div>
 
               <div>
@@ -194,7 +238,7 @@ export function WebhookModal({
               </button>
               <button
                 onClick={handleSave}
-                disabled={!url.trim()}
+                disabled={!url.trim() || !!urlError}
                 className="rounded-lg bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
               >
                 {webhook ? "Save Changes" : "Create Webhook"}

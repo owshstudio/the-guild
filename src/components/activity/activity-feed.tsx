@@ -21,13 +21,16 @@ export default function ActivityFeed() {
       <div className="mb-4 flex gap-2">
         <button
           onClick={() => setFilter("all")}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
             filter === "all"
               ? "bg-white/[0.1] text-white"
               : "text-[#737373] hover:text-[#a3a3a3]"
           }`}
         >
           All
+          <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-[#737373]">
+            {activity.length}
+          </span>
         </button>
         {agents.map((agent) => (
           <button
@@ -41,6 +44,9 @@ export default function ActivityFeed() {
           >
             <span>{agent.emoji}</span>
             {agent.name}
+            <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-[#737373]">
+              {activity.filter((e) => e.agentId === agent.id).length}
+            </span>
           </button>
         ))}
       </div>

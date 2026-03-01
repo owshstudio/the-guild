@@ -130,6 +130,44 @@ export async function listSessions(agentId?: string): Promise<SessionMeta[]> {
   }
 }
 
+/**
+ * Look up the Guild-specific session ID for an agent by reading sessions.json.
+ * The Guild uses session key format: agent:<agentId>:guild:direct:operator
+ */
+export async function findGuildSession(
+  agentId?: string
+): Promise<{ sessionId: string; updatedAt: number } | null> {
+  try {
+    const resolvedAgent = agentId || "main";
+    if (!sanitizeId(resolvedAgent)) return null;
+
+    const config = await getConfig();
+    const sessionsJsonPath = path.join(
+      config.agentsPath,
+      resolvedAgent,
+      "sessions",
+      "sessions.json"
+    );
+    const raw = await readFile(sessionsJsonPath, "utf-8");
+    const data = JSON.parse(raw) as Record<
+      string,
+      { sessionId?: string; updatedAt?: number }
+    >;
+
+    const guildKey = `agent:${resolvedAgent}:guild:direct:operator`;
+    const entry = data[guildKey];
+    if (entry?.sessionId) {
+      return {
+        sessionId: entry.sessionId,
+        updatedAt: entry.updatedAt ?? 0,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function readToolsList(subpath?: string): Promise<string[]> {
   try {
     const config = await getConfig();

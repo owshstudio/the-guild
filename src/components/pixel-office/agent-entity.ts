@@ -8,15 +8,12 @@ import {
   COFFEE_MACHINE,
   WANDER_BOUNDS,
 } from "./office-layouts";
-import { ROOMS } from "./room-layouts";
-
 export type BehaviorState =
   | "working"
   | "getting-coffee"
   | "wandering"
   | "sitting-idle"
-  | "standing-idle"
-  | "room-transition";
+  | "standing-idle";
 
 export interface AgentEntity {
   id: string;
@@ -181,16 +178,6 @@ function facingFromDirection(
   return dc >= 0 ? "right" : "left";
 }
 
-function findDoorTile(room: RoomId): { col: number; row: number } | null {
-  const roomDef = ROOMS[room];
-  if (!roomDef) return null;
-  const doorKeys = Object.keys(roomDef.doors);
-  if (doorKeys.length === 0) return null;
-  const key = doorKeys[Math.floor(Math.random() * doorKeys.length)];
-  const [col, row] = key.split(",").map(Number);
-  return { col, row };
-}
-
 export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
   const desk = getDesk(agent.id);
   const roll = Math.random();
@@ -204,17 +191,6 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
     agent.state = "typing";
     agent.behaviorTimer = randomRange(8, 15);
     return;
-  }
-
-  // 5% chance to attempt room transition
-  if (roll < 0.05) {
-    const doorTile = findDoorTile(agent.currentRoom);
-    if (doorTile) {
-      agent.behavior = "room-transition";
-      tryMoveTo(agent, tilemap, doorTile.col, doorTile.row, true);
-      agent.behaviorTimer = randomRange(2, 4);
-      return;
-    }
   }
 
   if (agent.status === "active") {
@@ -392,9 +368,16 @@ export function drawAgent(
   const sprites = getCharacterSprites(agent.paletteId);
 
   // Pick the right sprite frame
+  const isSeated =
+    (agent.behavior === "working" || agent.behavior === "sitting-idle") &&
+    agent.state !== "walking";
+
   let sprite: SpriteData;
-  if (agent.state === "typing") {
-    sprite = sprites.typing[agent.frame % 2];
+  if (isSeated) {
+    // Use sitting sprite (includes chair back/seat from behind)
+    sprite = agent.state === "typing"
+      ? sprites.sitting[agent.frame % 2]
+      : sprites.sitting[0];
   } else if (agent.state === "walking") {
     switch (agent.facing) {
       case "down":

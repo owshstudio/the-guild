@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Agent, RoomId } from "@/lib/types";
+import { Agent } from "@/lib/types";
 import {
   OFFICE,
   drawTileFloor,
@@ -33,21 +33,6 @@ interface PixelOfficeCanvasProps {
   onAgentClick: (agent: Agent | null) => void;
   agents?: Agent[];
 }
-
-// Room tab colors
-const ROOM_COLORS: Record<RoomId, string> = {
-  "main-office": "#3b82f6",
-  "break-room": "#22c55e",
-  "server-room": "#8b5cf6",
-  "meeting-room": "#f59e0b",
-};
-
-// Minimap constants
-const MINIMAP_W = 120;
-const MINIMAP_H = 80;
-const MINIMAP_PADDING = 8;
-const MINIMAP_ROOM_W = 52;
-const MINIMAP_ROOM_H = 32;
 
 // Edit mode button layout
 const EDIT_BTN_W = 60;
@@ -120,138 +105,6 @@ export default function PixelOfficeCanvas({
       }
     }
   }, [agentsProp]);
-
-  const drawRoomTabs = useCallback(
-    (ctx: CanvasRenderingContext2D) => {
-      const rm = roomManagerRef.current;
-      const rooms = rm.getRoomNames();
-      const tabW = 100;
-      const tabH = 24;
-      const gap = 4;
-      const startX = OFFICE.width - (rooms.length * (tabW + gap)) - 8;
-      const startY = 8;
-
-      ctx.save();
-      for (let i = 0; i < rooms.length; i++) {
-        const room = rooms[i];
-        const x = startX + i * (tabW + gap);
-        const isActive = room.id === rm.currentRoomId;
-
-        // Tab background
-        ctx.fillStyle = isActive
-          ? "rgba(255, 255, 255, 0.95)"
-          : "rgba(255, 255, 255, 0.6)";
-        ctx.fillRect(x, startY, tabW, tabH);
-
-        // Active indicator — gradient underline
-        if (isActive) {
-          const color = ROOM_COLORS[room.id];
-          const grad = ctx.createLinearGradient(x, 0, x + tabW, 0);
-          grad.addColorStop(0, color + "00");
-          grad.addColorStop(0.2, color);
-          grad.addColorStop(0.8, color);
-          grad.addColorStop(1, color + "00");
-          ctx.fillStyle = grad;
-          ctx.fillRect(x, startY + tabH - 3, tabW, 3);
-        }
-
-        // Border
-        ctx.strokeStyle = isActive
-          ? "rgba(0, 0, 0, 0.2)"
-          : "rgba(0, 0, 0, 0.1)";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, startY, tabW, tabH);
-
-        // Label
-        ctx.font = isActive ? "bold 10px monospace" : "10px monospace";
-        ctx.textAlign = "center";
-        ctx.fillStyle = isActive ? "#1a1a1a" : "#666666";
-        ctx.fillText(room.name, x + tabW / 2, startY + tabH / 2 + 3);
-      }
-      ctx.restore();
-    },
-    []
-  );
-
-  const drawMinimap = useCallback(
-    (ctx: CanvasRenderingContext2D) => {
-      const rm = roomManagerRef.current;
-      const allAgents = agentsRef.current;
-      const locations = rm.getAllAgentLocations(allAgents);
-
-      const x = OFFICE.width - MINIMAP_W - 8;
-      const y = OFFICE.height - MINIMAP_H - 8;
-
-      ctx.save();
-
-      // Minimap background
-      ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-      ctx.fillRect(x, y, MINIMAP_W, MINIMAP_H);
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x, y, MINIMAP_W, MINIMAP_H);
-
-      // Draw 4 room rectangles in a 2x2 grid
-      const roomIds: RoomId[] = [
-        "main-office",
-        "break-room",
-        "server-room",
-        "meeting-room",
-      ];
-      const positions = [
-        { rx: 0, ry: 0 },
-        { rx: 1, ry: 0 },
-        { rx: 0, ry: 1 },
-        { rx: 1, ry: 1 },
-      ];
-
-      for (let i = 0; i < roomIds.length; i++) {
-        const roomId = roomIds[i];
-        const pos = positions[i];
-        const rx =
-          x +
-          MINIMAP_PADDING +
-          pos.rx * (MINIMAP_ROOM_W + MINIMAP_PADDING / 2);
-        const ry =
-          y +
-          MINIMAP_PADDING +
-          pos.ry * (MINIMAP_ROOM_H + MINIMAP_PADDING / 2);
-
-        const isActive = roomId === rm.currentRoomId;
-        const color = ROOM_COLORS[roomId];
-
-        // Room rectangle
-        ctx.fillStyle = isActive ? color + "60" : color + "30";
-        ctx.fillRect(rx, ry, MINIMAP_ROOM_W, MINIMAP_ROOM_H);
-        ctx.strokeStyle = isActive ? color : color + "80";
-        ctx.lineWidth = isActive ? 2 : 1;
-        ctx.strokeRect(rx, ry, MINIMAP_ROOM_W, MINIMAP_ROOM_H);
-
-        // Agent dots
-        const agentIds = locations[roomId];
-        for (let j = 0; j < agentIds.length; j++) {
-          const agent = allAgents.find((a) => a.id === agentIds[j]);
-          if (!agent) continue;
-          // Map agent tile position to minimap room
-          const dotX =
-            rx + 4 + ((agent.tileCol / 14) * (MINIMAP_ROOM_W - 8));
-          const dotY =
-            ry + 4 + ((agent.tileRow / 9) * (MINIMAP_ROOM_H - 8));
-          ctx.beginPath();
-          ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
-          ctx.fillStyle = "#ffffff";
-          ctx.fill();
-          ctx.beginPath();
-          ctx.arc(dotX, dotY, 2, 0, Math.PI * 2);
-          ctx.fillStyle = color;
-          ctx.fill();
-        }
-      }
-
-      ctx.restore();
-    },
-    []
-  );
 
   const drawEditModeOverlays = useCallback(
     (ctx: CanvasRenderingContext2D, deltaTime: number) => {
@@ -391,10 +244,6 @@ export default function PixelOfficeCanvas({
 
       ctx.clearRect(0, 0, width, height);
 
-      // Update transition
-      const transitioning = rm.updateTransition(deltaTime);
-      const alpha = rm.getTransitionAlpha();
-
       // Update all agents (current room uses pathfinding, off-screen rooms just decrement timers)
       const currentTilemap = rm.getCurrentTilemap();
       for (const agent of allAgents) {
@@ -410,11 +259,6 @@ export default function PixelOfficeCanvas({
         }
       }
 
-      // Apply transition alpha
-      if (transitioning) {
-        ctx.globalAlpha = alpha;
-      }
-
       // Draw current room
       const tilemap = rm.getCurrentTilemap();
 
@@ -425,10 +269,23 @@ export default function PixelOfficeCanvas({
       drawFurnitureBack(ctx, tilemap);
 
       // Pass 3+4: agents and front-furniture Y-interleaved
-      // Collect chair tiles as drawable items alongside agents, then sort by Y
-      // so agents walking below a chair row render in front of those chairs.
+      // Agents sitting at their desk occupy the chair visually, so we skip
+      // drawing the furniture chair sprite for occupied seats to avoid
+      // double-drawing. For unoccupied chairs and walking agents, Y-sort
+      // determines correct layering.
       const visibleAgents = rm.getCurrentAgents(allAgents);
       const edit = editModeRef.current;
+
+      // Build set of chair tiles occupied by sitting agents
+      const occupiedChairs = new Set<string>();
+      for (const agent of visibleAgents) {
+        const isSeated =
+          agent.behavior === "working" ||
+          agent.behavior === "sitting-idle";
+        if (isSeated && agent.state !== "walking") {
+          occupiedChairs.add(`${agent.tileCol},${agent.tileRow}`);
+        }
+      }
 
       type Drawable =
         | { kind: "agent"; agent: AgentEntity; y: number }
@@ -440,17 +297,19 @@ export default function PixelOfficeCanvas({
         y: agent.y,
       }));
 
-      // Add chair tiles as drawables
+      // Add unoccupied chair tiles as drawables
       const ts = OFFICE.tileSize;
       for (let row = 0; row < tilemap.rows; row++) {
         for (let col = 0; col < tilemap.cols; col++) {
           if (tilemap.getTile(col, row) === TileType.Chair) {
-            drawables.push({
-              kind: "chair",
-              col,
-              row,
-              y: row * ts,
-            });
+            if (!occupiedChairs.has(`${col},${row}`)) {
+              drawables.push({
+                kind: "chair",
+                col,
+                row,
+                y: row * ts,
+              });
+            }
           }
         }
       }
@@ -467,11 +326,6 @@ export default function PixelOfficeCanvas({
           ctx.drawImage(chairCanvas, d.col * ts, d.row * ts, ts, ts);
         }
       });
-
-      // Reset alpha
-      if (transitioning) {
-        ctx.globalAlpha = 1;
-      }
 
       // Pass 5: overlays (hover highlight) — gated by ambientLighting setting
       if (hoveredRef.current && !edit.active && appearance.ambientLighting) {
@@ -515,18 +369,10 @@ export default function PixelOfficeCanvas({
         }
       }
 
-      // Pass 7: room tabs
-      drawRoomTabs(ctx);
-
-      // Pass 8: minimap — gated by particles setting (minimap acts as ambient particle UI)
-      if (appearance.particles) {
-        drawMinimap(ctx);
-      }
-
-      // Pass 9: edit button
+      // Pass 7: edit button
       drawEditButton(ctx);
     },
-    [drawRoomTabs, drawMinimap, drawEditModeOverlays, drawEditButton]
+    [drawEditModeOverlays, drawEditButton]
   );
 
   useEffect(() => {
@@ -733,73 +579,6 @@ export default function PixelOfficeCanvas({
         return;
       }
 
-      // Check room tab clicks
-      const rooms = rm.getRoomNames();
-      const tabW = 100;
-      const tabH = 24;
-      const gap = 4;
-      const tabStartX = OFFICE.width - (rooms.length * (tabW + gap)) - 8;
-      const tabStartY = 8;
-
-      for (let i = 0; i < rooms.length; i++) {
-        const tx = tabStartX + i * (tabW + gap);
-        if (
-          coords.x >= tx &&
-          coords.x <= tx + tabW &&
-          coords.y >= tabStartY &&
-          coords.y <= tabStartY + tabH
-        ) {
-          rm.switchRoom(rooms[i].id);
-          forceRender((n) => n + 1);
-          return;
-        }
-      }
-
-      // Check minimap clicks
-      const mmX = OFFICE.width - MINIMAP_W - 8;
-      const mmY = OFFICE.height - MINIMAP_H - 8;
-      if (
-        coords.x >= mmX &&
-        coords.x <= mmX + MINIMAP_W &&
-        coords.y >= mmY &&
-        coords.y <= mmY + MINIMAP_H
-      ) {
-        const roomIds: RoomId[] = [
-          "main-office",
-          "break-room",
-          "server-room",
-          "meeting-room",
-        ];
-        const positions = [
-          { rx: 0, ry: 0 },
-          { rx: 1, ry: 0 },
-          { rx: 0, ry: 1 },
-          { rx: 1, ry: 1 },
-        ];
-        for (let i = 0; i < roomIds.length; i++) {
-          const pos = positions[i];
-          const rx =
-            mmX +
-            MINIMAP_PADDING +
-            pos.rx * (MINIMAP_ROOM_W + MINIMAP_PADDING / 2);
-          const ry =
-            mmY +
-            MINIMAP_PADDING +
-            pos.ry * (MINIMAP_ROOM_H + MINIMAP_PADDING / 2);
-          if (
-            coords.x >= rx &&
-            coords.x <= rx + MINIMAP_ROOM_W &&
-            coords.y >= ry &&
-            coords.y <= ry + MINIMAP_ROOM_H
-          ) {
-            rm.switchRoom(roomIds[i]);
-            forceRender((n) => n + 1);
-            return;
-          }
-        }
-        return;
-      }
-
       // Check agent clicks — show "Customize" via normal agent click handler
       const visibleAgents = rm.getCurrentAgents(agentsRef.current);
       for (const agent of visibleAgents) {
@@ -840,37 +619,6 @@ export default function PixelOfficeCanvas({
         coords.y >= EDIT_BTN_Y &&
         coords.y <= EDIT_BTN_Y + EDIT_BTN_H
       ) {
-        canvas.style.cursor = "pointer";
-        if (hoveredRef.current !== null) {
-          hoveredRef.current = null;
-          forceRender((n) => n + 1);
-        }
-        return;
-      }
-
-      // Check if over room tabs or minimap — show pointer
-      const rooms = rm.getRoomNames();
-      const tabW = 100;
-      const tabH = 24;
-      const gap = 4;
-      const tabStartX = OFFICE.width - (rooms.length * (tabW + gap)) - 8;
-      const tabStartY = 8;
-      const mmX = OFFICE.width - MINIMAP_W - 8;
-      const mmY = OFFICE.height - MINIMAP_H - 8;
-
-      const overTab =
-        coords.x >= tabStartX &&
-        coords.x <= tabStartX + rooms.length * (tabW + gap) &&
-        coords.y >= tabStartY &&
-        coords.y <= tabStartY + tabH;
-
-      const overMinimap =
-        coords.x >= mmX &&
-        coords.x <= mmX + MINIMAP_W &&
-        coords.y >= mmY &&
-        coords.y <= mmY + MINIMAP_H;
-
-      if (overTab || overMinimap) {
         canvas.style.cursor = "pointer";
         if (hoveredRef.current !== null) {
           hoveredRef.current = null;

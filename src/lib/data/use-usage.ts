@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import type { AgentUsageDay } from "@/lib/types";
 import { dailyUsage as mockUsage } from "@/lib/mock-data";
+import { usePoll } from "./use-poll";
 
 export function useUsage() {
   const [usage, setUsage] = useState<AgentUsageDay[]>(mockUsage);
@@ -22,11 +23,7 @@ export function useUsage() {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchUsage();
-    const interval = setInterval(fetchUsage, 60000);
-    return () => clearInterval(interval);
-  }, [fetchUsage]);
+  usePoll(fetchUsage, 60000);
 
   return { usage, isLive, isLoading };
 }

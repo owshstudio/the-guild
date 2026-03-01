@@ -35,9 +35,10 @@ export function useGatewayStatus() {
   }, []);
 
   useEffect(() => {
-    fetchStatus();
+    const fn = fetchStatus;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
+    fn();
 
-    // Use backoff-aware polling — restart interval after each fetch
     function schedulePoll() {
       clearInterval(intervalRef.current);
       const interval =
@@ -47,7 +48,7 @@ export function useGatewayStatus() {
               BASE_INTERVAL * Math.pow(2, errorCountRef.current),
               MAX_BACKOFF_INTERVAL
             );
-      intervalRef.current = setInterval(fetchStatus, interval);
+      intervalRef.current = setInterval(fn, interval);
     }
 
     schedulePoll();

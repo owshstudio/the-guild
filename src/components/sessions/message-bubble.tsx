@@ -70,6 +70,11 @@ interface MessageBubbleProps {
 
 export default function MessageBubble({ message }: MessageBubbleProps) {
   const hasContent = message.content && message.content.trim().length > 0;
+  const isUser = message.role === "user";
+  const rendered = useMemo(
+    () => (hasContent ? renderMarkdown(message.content) : null),
+    [hasContent, message.content]
+  );
 
   // Skip rendering empty assistant messages (tool-only turns)
   if (!hasContent && message.role === "assistant" && !message.thinking) {
@@ -86,12 +91,6 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
       </div>
     );
   }
-
-  const isUser = message.role === "user";
-  const rendered = useMemo(
-    () => (hasContent ? renderMarkdown(message.content) : null),
-    [hasContent, message.content]
-  );
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} py-1.5`}>

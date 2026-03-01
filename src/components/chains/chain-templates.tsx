@@ -2,6 +2,10 @@
 
 import type { TaskChain, ChainStep } from "@/lib/types";
 
+function generateId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
 interface TemplateDefinition {
   name: string;
   description: string;
@@ -136,13 +140,13 @@ interface ChainTemplatesProps {
 export default function ChainTemplates({ onSelect }: ChainTemplatesProps) {
   function createFromTemplate(template: TemplateDefinition) {
     const chain: TaskChain = {
-      id: `chain-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: generateId("chain"),
       name: template.name,
       description: template.description,
       status: "draft",
       steps: template.steps.map((s, i) => ({
         ...s,
-        id: `step-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        id: generateId(`step-${i}`),
       })),
       createdAt: new Date().toISOString(),
       isTemplate: false,
@@ -152,7 +156,7 @@ export default function ChainTemplates({ onSelect }: ChainTemplatesProps) {
 
   function createBlank() {
     const chain: TaskChain = {
-      id: `chain-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: generateId("chain"),
       name: "New Chain",
       description: "",
       status: "draft",

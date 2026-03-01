@@ -5,7 +5,6 @@ import { TileMap } from "./tilemap";
 import { PathNode, findPath } from "./pathfinding";
 import {
   deskAssignments,
-  DeskAssignment,
   COFFEE_MACHINE,
   WANDER_BOUNDS,
 } from "./office-layouts";

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { usePoll } from "./use-poll";
 import type { Team } from "@/lib/types";
 
 const DEFAULT_TEAMS: Team[] = [];
@@ -23,11 +24,7 @@ export function useTeams() {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchTeams();
-    const interval = setInterval(fetchTeams, 30000);
-    return () => clearInterval(interval);
-  }, [fetchTeams]);
+  usePoll(fetchTeams, 30000);
 
   const createTeam = useCallback(
     async (team: Omit<Team, "id" | "createdAt">) => {

@@ -3,12 +3,23 @@ import path from "path";
 import { homedir } from "os";
 import { getConfig } from "./config";
 
-interface JsonRpcResponse {
-  jsonrpc: string;
-  id: string;
-  result?: unknown;
-  error?: { code: number; message: string };
+// OpenClaw gateway frame types
+interface EventFrame {
+  type: "event";
+  event: string;
+  payload: Record<string, unknown>;
+  seq?: number;
 }
+
+interface ResponseFrame {
+  type: "res";
+  id: string;
+  ok: boolean;
+  payload?: Record<string, unknown>;
+  error?: { code: string; message: string; retryable?: boolean };
+}
+
+type GatewayFrame = EventFrame | ResponseFrame;
 
 async function getAuthToken(): Promise<string | null> {
   try {
@@ -26,54 +37,123 @@ async function getAuthToken(): Promise<string | null> {
 export async function sendGatewayCommand(
   method: string,
   params: Record<string, unknown>
-): Promise<JsonRpcResponse> {
+): Promise<{ ok: boolean; payload?: Record<string, unknown>; error?: { code: string; message: string } }> {
   const config = await getConfig();
   const token = await getAuthToken();
   const host = process.env.OPENCLAW_GATEWAY_HOST || "localhost";
   const url = `ws://${host}:${config.gatewayPort}`;
-  const id = crypto.randomUUID();
-
-  const message = JSON.stringify({
-    jsonrpc: "2.0",
-    method,
-    params: { ...params, ...(token ? { token } : {}) },
-    id,
-  });
 
   try {
     if (typeof WebSocket === "undefined") {
-      return { jsonrpc: "2.0", id, error: { code: -1, message: "WebSocket not available" } };
+      return { ok: false, error: { code: "NO_WS", message: "WebSocket not available in this environment" } };
     }
 
-    return await new Promise<JsonRpcResponse>((resolve) => {
+    return await new Promise((resolve) => {
       const ws = new WebSocket(url);
+      let authenticated = false;
+
       const timeout = setTimeout(() => {
         ws.close();
-        resolve({ jsonrpc: "2.0", id, error: { code: -2, message: "Timeout after 5s" } });
-      }, 5000);
+        resolve({ ok: false, error: { code: "TIMEOUT", message: "Gateway connection timed out after 15s" } });
+      }, 15000);
 
       ws.onopen = () => {
-        ws.send(message);
+        // Wait for connect.challenge event — don't send anything yet
       };
 
       ws.onmessage = (event) => {
-        clearTimeout(timeout);
+        let frame: GatewayFrame;
         try {
-          const data = JSON.parse(String(event.data)) as JsonRpcResponse;
-          resolve(data);
+          frame = JSON.parse(String(event.data)) as GatewayFrame;
         } catch {
-          resolve({ jsonrpc: "2.0", id, error: { code: -3, message: "Invalid response" } });
+          return;
         }
-        ws.close();
+
+        // Step 1: Receive connect.challenge, send connect request
+        if (frame.type === "event" && frame.event === "connect.challenge") {
+          const connectReq = JSON.stringify({
+            type: "req",
+            id: crypto.randomUUID(),
+            method: "connect",
+            params: {
+              minProtocol: 3,
+              maxProtocol: 3,
+              client: {
+                id: "gateway-client",
+                version: "0.5.0",
+                platform: process.platform,
+                mode: "backend",
+                displayName: "The Guild Dashboard",
+                instanceId: `guild-${Date.now()}`,
+              },
+              role: "operator",
+              scopes: ["operator.admin"],
+              caps: [],
+              commands: [],
+              auth: token ? { token } : {},
+            },
+          });
+
+          ws.send(connectReq);
+          return;
+        }
+
+        // Step 2: Receive hello-ok, then send the actual command
+        if (frame.type === "res" && !authenticated) {
+          if (frame.ok) {
+            authenticated = true;
+
+            // Now send the actual command
+            const reqId = crypto.randomUUID();
+            const reqFrame = JSON.stringify({
+              type: "req",
+              id: reqId,
+              method,
+              params,
+            });
+
+            ws.send(reqFrame);
+          } else {
+            clearTimeout(timeout);
+            ws.close();
+            resolve({
+              ok: false,
+              error: {
+                code: frame.error?.code || "AUTH_FAILED",
+                message: frame.error?.message || "Gateway authentication failed",
+              },
+            });
+          }
+          return;
+        }
+
+        // Step 3: Receive the command response
+        if (frame.type === "res" && authenticated) {
+          clearTimeout(timeout);
+          ws.close();
+
+          if (frame.ok) {
+            resolve({ ok: true, payload: frame.payload });
+          } else {
+            resolve({
+              ok: false,
+              error: {
+                code: frame.error?.code || "COMMAND_FAILED",
+                message: frame.error?.message || "Command failed",
+              },
+            });
+          }
+          return;
+        }
       };
 
       ws.onerror = () => {
         clearTimeout(timeout);
-        resolve({ jsonrpc: "2.0", id, error: { code: -4, message: "Connection failed" } });
+        resolve({ ok: false, error: { code: "CONNECTION_FAILED", message: `Could not connect to gateway at ${url}` } });
         ws.close();
       };
     });
   } catch {
-    return { jsonrpc: "2.0", id, error: { code: -1, message: "WebSocket not available" } };
+    return { ok: false, error: { code: "WS_ERROR", message: "WebSocket not available" } };
   }
 }

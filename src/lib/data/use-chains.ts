@@ -33,14 +33,16 @@ export function useChains() {
   }, []);
 
   useEffect(() => {
-    fetchChains();
+    const fetch = fetchChains;
+    const check = triggerCheck;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
+    fetch();
     const interval = setInterval(() => {
       checkTickRef.current += 1;
-      // Every 2nd tick (30s) also trigger a check
       if (checkTickRef.current % 2 === 0) {
-        triggerCheck();
+        check();
       } else {
-        fetchChains();
+        fetch();
       }
     }, 15_000);
     return () => clearInterval(interval);

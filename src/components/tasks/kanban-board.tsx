@@ -44,7 +44,7 @@ export default function KanbanBoard({
         );
       orderMap[agent.id] = agentTasks.map((t) => t.id);
     }
-    setTaskOrderMap(orderMap);
+    setTaskOrderMap(orderMap); // eslint-disable-line react-hooks/set-state-in-effect
   }, [tasks, agents]);
 
   const handleReorder = useCallback(

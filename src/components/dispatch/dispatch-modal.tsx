@@ -22,7 +22,7 @@ export function DispatchModal({ isOpen, onClose, targetAgentId }: DispatchModalP
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (targetAgentId) setSelectedAgentId(targetAgentId);
+    if (targetAgentId) setSelectedAgentId(targetAgentId); // eslint-disable-line react-hooks/set-state-in-effect
   }, [targetAgentId]);
 
   useEffect(() => {

@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     const job = (await req.json()) as CronJob;
 
     // Prevent client from overriding the server-generated id
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- strip server-managed fields
     const { id: _clientId, createdAt: _ca, updatedAt: _ua, ...safeFields } = job;
 
     const data = (await readCronJobs()) as { version: number; jobs: CronJob[] };

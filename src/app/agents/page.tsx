@@ -15,7 +15,7 @@ type ViewTab = "agents" | "teams";
 
 export default function AgentsPage() {
   const { agents } = useAgents();
-  const { teams, createTeam, updateTeam, deleteTeam } = useTeams();
+  const { teams, createTeam, updateTeam } = useTeams();
   const [tab, setTab] = useState<ViewTab>("agents");
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);

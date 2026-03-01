@@ -30,7 +30,6 @@ const priorityColors: Record<string, { bg: string; text: string }> = {
 export default function TaskCard({
   task,
   draggable,
-  onUpdateTask,
   onDeleteTask,
 }: TaskCardProps) {
   const status = statusConfig[task.status];

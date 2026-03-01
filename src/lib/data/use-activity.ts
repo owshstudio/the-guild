@@ -61,8 +61,10 @@ export function useActivity() {
   );
 
   useEffect(() => {
-    fetchActivity();
-    intervalRef.current = setInterval(fetchActivity, BASE_INTERVAL);
+    const fnRef = fetchActivity;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
+    fnRef();
+    intervalRef.current = setInterval(fnRef, BASE_INTERVAL);
     return () => clearInterval(intervalRef.current);
   }, [fetchActivity]);
 

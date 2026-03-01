@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+
+function computeUptimeDays(since: string): number {
+  return Math.max(1, Math.floor((Date.now() - new Date(since).getTime()) / 86400000));
+}
 import {
   BarChart,
   Bar,
@@ -198,7 +202,7 @@ export default function UsagePage() {
                       </p>
                       <p className="mt-1 text-lg font-semibold text-white">
                         {agent.uptimeSince
-                          ? `${Math.max(1, Math.floor((Date.now() - new Date(agent.uptimeSince).getTime()) / 86400000))}d`
+                          ? `${computeUptimeDays(agent.uptimeSince)}d`
                           : "--"}
                       </p>
                     </div>
@@ -214,7 +218,7 @@ export default function UsagePage() {
               Daily Token Usage
             </h3>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={dailyUsage} barGap={2}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
                   <XAxis
@@ -250,7 +254,7 @@ export default function UsagePage() {
               Cumulative Token Usage
             </h3>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <LineChart data={cumulativeData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
                   <XAxis

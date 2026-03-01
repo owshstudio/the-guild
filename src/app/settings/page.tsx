@@ -46,7 +46,10 @@ export default function SettingsPage() {
   const { agents } = useAgents();
   const { addToast } = useToasts();
   const lanIp = useNetworkInfo();
-  const [settings, setSettings] = useState<GuildSettings | null>(null);
+  const [settings, setSettings] = useState<GuildSettings | null>(() => {
+    if (typeof window === "undefined") return null;
+    return loadSettings();
+  });
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<boolean | null>(null);
   const [tokenInput, setTokenInput] = useState("");
@@ -74,11 +77,6 @@ export default function SettingsPage() {
       setTokenStatus("error");
     }
   };
-
-  // Load settings on mount
-  useEffect(() => {
-    setSettings(loadSettings());
-  }, []);
 
   // Auto-save on change with debounce
   const update = useCallback(

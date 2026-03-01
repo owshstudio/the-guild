@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { usePoll } from "./use-poll";
 import type { WebhookConfig, WebhookDeliveryLog } from "@/lib/types";
 
 export function useWebhooks() {
@@ -25,11 +26,7 @@ export function useWebhooks() {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchWebhooks();
-    const interval = setInterval(fetchWebhooks, 60000);
-    return () => clearInterval(interval);
-  }, [fetchWebhooks]);
+  usePoll(fetchWebhooks, 60000);
 
   const createWebhook = useCallback(
     async (data: Partial<WebhookConfig>) => {

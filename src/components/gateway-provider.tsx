@@ -4,11 +4,11 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
   type ReactNode,
 } from "react";
 import { checkGatewayHealth } from "@/lib/gateway";
+import { usePoll } from "@/lib/data/use-poll";
 
 interface GatewayContextType {
   isConnected: boolean;
@@ -39,11 +39,7 @@ export function GatewayProvider({ children }: { children: ReactNode }) {
     setLastChecked(new Date());
   }, []);
 
-  useEffect(() => {
-    check();
-    const interval = setInterval(check, 30000);
-    return () => clearInterval(interval);
-  }, [check]);
+  usePoll(check, 30000);
 
   return (
     <GatewayContext.Provider value={{ isConnected, isChecking, lastChecked }}>

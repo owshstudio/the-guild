@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import type { AgentCostEntry, BudgetPeriod } from "@/lib/types";
+import { usePoll } from "./use-poll";
 
 const INITIAL_COSTS: AgentCostEntry[] = [];
 
@@ -23,11 +24,7 @@ export function useCosts(period: BudgetPeriod = "weekly") {
     setIsLoading(false);
   }, [period]);
 
-  useEffect(() => {
-    fetchCosts();
-    const interval = setInterval(fetchCosts, 60000);
-    return () => clearInterval(interval);
-  }, [fetchCosts]);
+  usePoll(fetchCosts, 60000);
 
   const totalSpend = costs.reduce((sum, c) => sum + c.estimatedCost, 0);
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { usePoll } from "./use-poll";
 import type { CommMessage } from "@/lib/types";
 
 interface UseCommsOptions {
@@ -14,11 +15,15 @@ export function useComms(options?: UseCommsOptions) {
   const [isLive, setIsLive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const from = options?.from;
+  const to = options?.to;
+  const channel = options?.channel;
+
   const fetchComms = useCallback(async () => {
     try {
       const params = new URLSearchParams();
-      if (options?.from) params.set("from", options.from);
-      if (options?.to) params.set("to", options.to);
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
       params.set("limit", "50");
 
       const res = await fetch(`/api/gateway/comms?${params.toString()}`);
@@ -27,8 +32,8 @@ export function useComms(options?: UseCommsOptions) {
       let data: CommMessage[] = json.data || [];
 
       // Client-side channel filter
-      if (options?.channel) {
-        data = data.filter((m: CommMessage) => m.channel === options.channel);
+      if (channel) {
+        data = data.filter((m: CommMessage) => m.channel === channel);
       }
 
       setMessages(data);
@@ -38,13 +43,9 @@ export function useComms(options?: UseCommsOptions) {
       setIsLive(false);
     }
     setIsLoading(false);
-  }, [options?.from, options?.to, options?.channel]);
+  }, [from, to, channel]);
 
-  useEffect(() => {
-    fetchComms();
-    const interval = setInterval(fetchComms, 15000);
-    return () => clearInterval(interval);
-  }, [fetchComms]);
+  usePoll(fetchComms, 15000);
 
   return { messages, isLive, isLoading };
 }

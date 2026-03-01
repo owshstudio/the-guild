@@ -1,6 +1,6 @@
 import { readFile, readdir, stat } from "fs/promises";
 import path from "path";
-import type { CommChannel, CommDirection, CommMessage } from "@/lib/types";
+import type { CommDirection, CommMessage } from "@/lib/types";
 import { getConfig } from "./config";
 import { listAgentDirs, readIdentity } from "./filesystem";
 

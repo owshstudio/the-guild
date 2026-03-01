@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
+import { usePoll } from "./use-poll";
 import type { Task } from "@/lib/types";
 
 const POLL_INTERVAL = 30_000;
@@ -8,7 +9,6 @@ const POLL_INTERVAL = 30_000;
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -21,11 +21,7 @@ export function useTasks() {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchTasks();
-    intervalRef.current = setInterval(fetchTasks, POLL_INTERVAL);
-    return () => clearInterval(intervalRef.current);
-  }, [fetchTasks]);
+  usePoll(fetchTasks, POLL_INTERVAL);
 
   const createTask = useCallback(
     async (task: {

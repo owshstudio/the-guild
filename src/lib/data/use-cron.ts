@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { usePoll } from "./use-poll";
 import type { CronJob } from "@/lib/types";
 
 interface CronData {
@@ -26,11 +27,7 @@ export function useCron() {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchCron();
-    const interval = setInterval(fetchCron, 60000);
-    return () => clearInterval(interval);
-  }, [fetchCron]);
+  usePoll(fetchCron, 60000);
 
   const createJob = useCallback(async (job: Omit<CronJob, "id" | "createdAt" | "updatedAt">) => {
     const res = await fetch("/api/gateway/cron", {

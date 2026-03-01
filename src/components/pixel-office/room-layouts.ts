@@ -1,7 +1,6 @@
 // Room layout definitions — 4 rooms, each 15x10 tiles
 
 import { TileType } from "./tiles";
-import { DeskAssignment } from "./office-layouts";
 import { RoomId, RoomDefinition } from "@/lib/types";
 
 const F = TileType.Floor;

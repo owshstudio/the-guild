@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { BudgetConfig, BudgetAlert } from "@/lib/types";
+import type { BudgetAlert } from "@/lib/types";
 
 export function BudgetAlertBanner() {
   const [alerts, setAlerts] = useState<BudgetAlert[]>([]);
@@ -11,7 +11,7 @@ export function BudgetAlertBanner() {
       const raw = localStorage.getItem("guild-budget-alerts");
       if (raw) {
         const parsed = JSON.parse(raw) as BudgetAlert[];
-        setAlerts(parsed.filter((a) => !a.dismissed));
+        setAlerts(parsed.filter((a) => !a.dismissed)); // eslint-disable-line react-hooks/set-state-in-effect
       }
     } catch {
       // No alerts

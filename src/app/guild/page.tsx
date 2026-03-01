@@ -24,9 +24,10 @@ export default function GuildPage() {
 
   // Clean up all active EventSources on unmount
   useEffect(() => {
+    const streams = activeStreams.current;
     return () => {
-      activeStreams.current.forEach((es) => es.close());
-      activeStreams.current.clear();
+      streams.forEach((es) => es.close());
+      streams.clear();
     };
   }, []);
 

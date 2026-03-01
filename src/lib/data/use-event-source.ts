@@ -27,8 +27,10 @@ export function useEventSource(
   const onReconnectRef = useRef(onReconnect);
 
   // Keep refs in sync without triggering re-subscribe
-  handlersRef.current = handlers;
-  onReconnectRef.current = onReconnect;
+  useEffect(() => {
+    handlersRef.current = handlers;
+    onReconnectRef.current = onReconnect;
+  });
 
   const listener = useCallback((event: string, data: unknown) => {
     if (event === "__reconnect") {
@@ -41,6 +43,7 @@ export function useEventSource(
 
   useEffect(() => {
     if (!enabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on disable
       setConnected(false);
       return;
     }

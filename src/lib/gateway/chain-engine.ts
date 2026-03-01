@@ -1,7 +1,7 @@
 import { readFile, writeFile, rename, mkdir } from "fs/promises";
 import path from "path";
 import { getConfig } from "./config";
-import type { TaskChain, ChainStep } from "@/lib/types";
+import type { TaskChain } from "@/lib/types";
 
 async function getChainsPath(): Promise<string> {
   const config = await getConfig();

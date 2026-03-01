@@ -63,8 +63,10 @@ export function useAgents() {
   );
 
   useEffect(() => {
-    fetchAgents();
-    intervalRef.current = setInterval(fetchAgents, BASE_INTERVAL);
+    const fnRef = fetchAgents;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
+    fnRef();
+    intervalRef.current = setInterval(fnRef, BASE_INTERVAL);
     return () => clearInterval(intervalRef.current);
   }, [fetchAgents]);
 

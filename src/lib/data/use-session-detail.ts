@@ -108,8 +108,10 @@ export function useSessionDetail(sessionId: string | null) {
 
   useEffect(() => {
     if (!sessionId) {
+      /* eslint-disable react-hooks/set-state-in-effect -- reset state when session changes */
       setSession(null);
       setIsLoading(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
 
@@ -118,12 +120,13 @@ export function useSessionDetail(sessionId: string | null) {
   }, [sessionId]);
 
   useEffect(() => {
-    fetchSession();
+    const fn = fetchSession;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
+    fn();
 
-    // If SSE is connected for a live session, poll less frequently
     const sseActive = isLive && !sseFailedRef.current;
     const interval = setInterval(
-      fetchSession,
+      fn,
       sseActive ? 30000 : isLive ? 3000 : 30000
     );
     return () => clearInterval(interval);

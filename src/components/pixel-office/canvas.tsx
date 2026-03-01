@@ -21,7 +21,6 @@ import {
   EditModeState,
   createEditModeState,
   getAvailableDesks,
-  isChairTile,
 } from "./edit-mode";
 import {
   loadOfficeConfig,
@@ -612,7 +611,7 @@ export default function PixelOfficeCanvas({
           // Find the desk that owns this chair
           const layout = roomDef.layout;
           let deskCol = tileCol;
-          let deskRow = tileRow - 1;
+          const deskRow = tileRow - 1;
 
           // Check if there's a desk above this chair
           if (

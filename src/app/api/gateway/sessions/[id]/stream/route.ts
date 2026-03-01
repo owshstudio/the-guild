@@ -29,6 +29,7 @@ export async function GET(
     async start(controller) {
       let byteOffset = 0;
       let inactiveTimer: ReturnType<typeof setTimeout>;
+      // eslint-disable-next-line prefer-const -- assigned once but must be declared before cleanup references it
       let keepaliveTimer: ReturnType<typeof setInterval>;
       let closed = false;
       const watcher = new FileWatcher();

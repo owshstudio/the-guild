@@ -33,6 +33,8 @@ export function WebhookModal({
   const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {
+    // Sync form state from webhook prop
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (webhook) {
       setName(webhook.name);
       setUrl(webhook.url);
@@ -47,6 +49,7 @@ export function WebhookModal({
       setEnabled(true);
     }
     setShowSecret(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [webhook, isOpen]);
 
   const toggleEvent = (event: WebhookEventType) => {

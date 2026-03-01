@@ -29,7 +29,7 @@ export default function Sidebar() {
 
   // Close on route change
   useEffect(() => {
-    setMobileOpen(false);
+    setMobileOpen(false); // eslint-disable-line react-hooks/set-state-in-effect
   }, [pathname]);
 
   return (

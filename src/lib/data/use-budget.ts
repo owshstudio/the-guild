@@ -41,7 +41,7 @@ export function useBudget(costs: AgentCostEntry[]) {
       .reduce((s, c) => s + c.estimatedCost, 0);
 
     const weeklySpend = costs.reduce((s, c) => s + c.estimatedCost, 0);
-    const monthlySpend = weeklySpend; // For now, same data window
+    const monthlySpend = weeklySpend;
 
     const newAlerts: BudgetAlert[] = [];
 
@@ -72,7 +72,6 @@ export function useBudget(costs: AgentCostEntry[]) {
       }
     };
 
-    // Check global limits
     checkLimit(todaySpend, config.limits.daily, "daily", "all");
     checkLimit(weeklySpend, config.limits.weekly, "weekly", "all");
     checkLimit(monthlySpend, config.limits.monthly, "monthly", "all");
@@ -90,7 +89,8 @@ export function useBudget(costs: AgentCostEntry[]) {
       setAlerts(merged);
       localStorage.setItem("guild-budget-alerts", JSON.stringify(merged));
     }
-  }, [costs, config, alerts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alerts excluded to prevent infinite loop
+  }, [costs, config]);
 
   const updateConfig = useCallback((newConfig: BudgetConfig) => {
     setConfig(newConfig);

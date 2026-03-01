@@ -174,7 +174,7 @@ export default function CharacterCreator({
 
   useEffect(() => {
     const custom = getCustomPalette(agentId);
-    setPalette(custom ?? getDefaultPalette(agentId));
+    setPalette(custom ?? getDefaultPalette(agentId)); // eslint-disable-line react-hooks/set-state-in-effect
   }, [agentId]);
 
   const update = useCallback(

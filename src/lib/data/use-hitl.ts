@@ -49,15 +49,17 @@ export function useHITL() {
 
   useEffect(() => {
     requestNotificationPermission();
-    fetchQueue();
+    const fetch = fetchQueue;
+    const scan = triggerScan;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
+    fetch();
 
     const interval = setInterval(() => {
       scanTickRef.current += 1;
-      // Every 6th tick (60s) also trigger a scan
       if (scanTickRef.current % 6 === 0) {
-        triggerScan().then(fetchQueue);
+        scan().then(fetch);
       } else {
-        fetchQueue();
+        fetch();
       }
     }, 10_000);
 

@@ -49,6 +49,7 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    // Sync form state from editJob prop
     if (editJob) {
       setName(editJob.name);
       setScheduleType(editJob.schedule.type);
@@ -96,6 +97,7 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
       setDeliveryAddress("");
       setDeleteAfterRun(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- agents excluded to prevent form reset on agent data refresh
   }, [editJob, isOpen]);
 
   const handleSave = async () => {

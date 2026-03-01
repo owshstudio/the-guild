@@ -4,12 +4,12 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
   useRef,
   type ReactNode,
 } from "react";
 import { useToasts } from "@/components/toast-provider";
+import { usePoll } from "./use-poll";
 
 interface DataContextType {
   isConnected: boolean;
@@ -67,11 +67,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLastChecked(new Date());
   }, [addToast]);
 
-  useEffect(() => {
-    check();
-    const interval = setInterval(check, 30000);
-    return () => clearInterval(interval);
-  }, [check]);
+  usePoll(check, 30000);
 
   return (
     <DataContext.Provider

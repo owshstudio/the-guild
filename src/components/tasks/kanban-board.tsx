@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Reorder } from "framer-motion";
 import { Task, TaskStatus, Agent } from "@/lib/types";
 import TaskCard from "./task-card";
@@ -55,10 +55,13 @@ export default function KanbanBoard({
   );
 
   // Build a task lookup
-  const taskMap = new Map<string, Task>();
-  for (const t of tasks) {
-    taskMap.set(t.id, t);
-  }
+  const taskMap = useMemo(() => {
+    const map = new Map<string, Task>();
+    for (const t of tasks) {
+      map.set(t.id, t);
+    }
+    return map;
+  }, [tasks]);
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">

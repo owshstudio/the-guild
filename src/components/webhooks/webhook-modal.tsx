@@ -124,7 +124,7 @@ export function WebhookModal({
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="fixed left-1/2 top-1/3 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[#2a2a2a] bg-[#141414] p-6 shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[#2a2a2a] bg-[#141414] p-6 shadow-2xl"
           >
             <h2 className="mb-4 text-lg font-semibold text-white">
               {webhook ? "Edit Webhook" : "Add Webhook"}
@@ -238,7 +238,7 @@ export function WebhookModal({
               </button>
               <button
                 onClick={handleSave}
-                disabled={!url.trim() || !!urlError}
+                disabled={!url.trim() || !!urlError || events.length === 0}
                 className="rounded-lg bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
               >
                 {webhook ? "Save Changes" : "Create Webhook"}

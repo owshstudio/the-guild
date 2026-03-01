@@ -3,17 +3,13 @@
 import { motion } from "framer-motion";
 import type { CronJob } from "@/lib/types";
 import { SchedulePreview } from "./schedule-preview";
-import { agents as mockAgents } from "@/lib/mock-data";
+import { useAgents } from "@/lib/data/use-agents";
 
 interface CronJobListProps {
   jobs: CronJob[];
   onEdit: (job: CronJob) => void;
   onDelete: (job: CronJob) => void;
   onToggle: (id: string) => void;
-}
-
-function getAgent(agentId: string) {
-  return mockAgents.find((a) => a.id === agentId);
 }
 
 function StatusDot({ status }: { status?: CronJob["status"] }) {
@@ -30,6 +26,9 @@ function StatusDot({ status }: { status?: CronJob["status"] }) {
 }
 
 export function CronJobList({ jobs, onEdit, onDelete, onToggle }: CronJobListProps) {
+  const { agents } = useAgents();
+  const getAgent = (agentId: string) => agents.find((a) => a.id === agentId);
+
   if (jobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#1f1f1f] bg-[#141414]/50 py-16">

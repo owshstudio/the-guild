@@ -1,11 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useDataSource } from "@/lib/data/data-provider";
 import { AnimatePresence, motion } from "framer-motion";
 import { APP_VERSION } from "@/lib/version";
+
+function useHITLCount() {
+  const [count, setCount] = useState(0);
+  const fetchCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/gateway/hitl");
+      const json = await res.json();
+      const items = json.data || [];
+      setCount(items.filter((i: { status: string }) => i.status === "pending").length);
+    } catch {
+      // ignore
+    }
+  }, []);
+  useEffect(() => {
+    fetchCount(); // eslint-disable-line react-hooks/set-state-in-effect -- initial fetch on mount
+    const interval = setInterval(fetchCount, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchCount]);
+  return count;
+}
 
 const navItems = [
   { href: "/guild", label: "Guild", icon: GuildIcon },
@@ -26,6 +46,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { dataSource } = useDataSource();
+  const hitlCount = useHITLCount();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close on route change
@@ -107,7 +128,12 @@ export default function Sidebar() {
               >
                 <item.icon active={isActive} />
                 {item.label}
-                {isActive && (
+                {item.badge && hitlCount > 0 && (
+                  <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#ef4444] px-1.5 text-[10px] font-bold text-white">
+                    {hitlCount}
+                  </span>
+                )}
+                {isActive && !item.badge && (
                   <div className="ml-auto h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#DF4F15] to-[#F9425F]" />
                 )}
               </Link>

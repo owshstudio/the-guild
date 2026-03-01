@@ -28,8 +28,9 @@ export function DispatchModal({ isOpen, onClose, targetAgentId }: DispatchModalP
   }, [targetAgentId]);
 
   useEffect(() => {
-    if (isOpen && textareaRef.current) {
-      textareaRef.current.focus();
+    if (isOpen) {
+      setMessage(""); // eslint-disable-line react-hooks/set-state-in-effect -- clear on open
+      textareaRef.current?.focus();
     }
   }, [isOpen]);
 

@@ -135,9 +135,10 @@ const TEMPLATES: TemplateDefinition[] = [
 
 interface ChainTemplatesProps {
   onSelect: (chain: TaskChain) => void;
+  onClose: () => void;
 }
 
-export default function ChainTemplates({ onSelect }: ChainTemplatesProps) {
+export default function ChainTemplates({ onSelect, onClose }: ChainTemplatesProps) {
   function createFromTemplate(template: TemplateDefinition) {
     const chain: TaskChain = {
       id: generateId("chain"),
@@ -215,7 +216,7 @@ export default function ChainTemplates({ onSelect }: ChainTemplatesProps) {
 
         <div className="mt-6 flex justify-end">
           <button
-            onClick={createBlank}
+            onClick={onClose}
             className="rounded-lg border border-[#1f1f1f] px-4 py-2 text-sm text-[#737373] transition hover:bg-[#1f1f1f]"
           >
             Cancel

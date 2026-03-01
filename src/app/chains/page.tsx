@@ -120,7 +120,7 @@ export default function ChainsPage() {
 
       {/* Template picker modal */}
       {showTemplates && (
-        <ChainTemplates onSelect={handleNewChain} />
+        <ChainTemplates onSelect={handleNewChain} onClose={() => setShowTemplates(false)} />
       )}
     </div>
   );

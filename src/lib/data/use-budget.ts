@@ -70,7 +70,7 @@ export function useBudget(costs: AgentCostEntry[]) {
         if (pct >= threshold) {
           const id = `${agentId}-${period}-${threshold}`;
           const existing = alerts.find((a) => a.id === id);
-          if (!existing || existing.dismissed) continue;
+          if (existing && !existing.dismissed) continue;
           newAlerts.push({
             id,
             agentId,

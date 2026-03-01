@@ -34,7 +34,7 @@ export default function CommsTimeline({
               key={msg.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06, duration: 0.35 }}
+              transition={{ delay: Math.min(i * 0.06, 0.5), duration: 0.35 }}
               className="relative flex items-start"
             >
               {/* Dot on the center line */}

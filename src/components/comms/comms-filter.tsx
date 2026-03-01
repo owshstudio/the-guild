@@ -38,7 +38,7 @@ export default function CommsFilter({
   const toOptions = [
     { value: "", label: "All" },
     ...agents.map((a) => ({ value: a.id, label: a.name })),
-    { value: "noah", label: "NOAH" },
+    { value: "operator", label: "Operator" },
   ];
 
   return (

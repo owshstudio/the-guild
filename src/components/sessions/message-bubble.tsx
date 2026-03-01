@@ -93,6 +93,17 @@ function renderLine(line: string, li: number, totalLines: number): React.ReactNo
     );
   }
 
+  // Ordered list items (1. 2. 3.)
+  const olMatch = trimmed.match(/^(\d+)\.\s/);
+  if (olMatch) {
+    return (
+      <div key={li} className="flex gap-2 pl-2">
+        <span className="shrink-0 min-w-[1.2em] text-right font-mono text-[#525252]">{olMatch[1]}.</span>
+        <span>{renderInline(trimmed.slice(olMatch[0].length), `ol-${li}`)}</span>
+      </div>
+    );
+  }
+
   // Plain text with inline markdown
   return (
     <span key={li}>

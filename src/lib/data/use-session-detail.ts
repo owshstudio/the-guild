@@ -15,6 +15,7 @@ export function useSessionDetail(sessionId: string | null) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const sseFailedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const sseCounterRef = useRef(0);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
@@ -81,7 +82,7 @@ export function useSessionDetail(sessionId: string | null) {
                     .join("\n")
                 : "";
           const newMessage: SessionMessage = {
-            id: `${sessionId}-sse-${Date.now()}`,
+            id: `${sessionId}-sse-${Date.now()}-${sseCounterRef.current++}`,
             role: msg.role,
             content: sanitizeContent(rawContent),
             timestamp: entry.timestamp,

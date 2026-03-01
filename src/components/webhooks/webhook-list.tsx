@@ -64,6 +64,9 @@ export function WebhookList({
             <div className="ml-4 flex items-center gap-2">
               <button
                 onClick={() => onToggle(webhook)}
+                role="switch"
+                aria-checked={webhook.enabled}
+                aria-label={`Toggle ${webhook.name}`}
                 className={`relative h-5 w-9 rounded-full transition-colors ${
                   webhook.enabled ? "bg-[#22c55e]" : "bg-[#2a2a2a]"
                 }`}

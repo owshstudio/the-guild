@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 
 import { spawn } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Read version from package.json
+const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8"));
+const version = pkg.version;
 
 // Parse CLI flags
 const args = process.argv.slice(2);
@@ -35,17 +39,40 @@ if (major < 20) {
 
 // Check for ~/.openclaw/
 const openclawDir = join(homedir(), ".openclaw");
-if (!existsSync(openclawDir)) {
-  console.warn("Warning: ~/.openclaw/ not found — continuing without it");
+const hasOpenClaw = existsSync(openclawDir);
+
+if (!hasOpenClaw) {
+  console.warn(
+    "\x1b[33m⚠ OpenClaw not found\x1b[0m — Install it to connect live agents:"
+  );
+  console.warn("  https://docs.openclaw.dev/install\n");
 }
 
 const hostname = lan ? "0.0.0.0" : "localhost";
+const mode = hasOpenClaw ? "LIVE" : "DEMO";
+const modeColor = hasOpenClaw ? "\x1b[32m" : "\x1b[33m";
+const reset = "\x1b[0m";
+const dim = "\x1b[2m";
+const bold = "\x1b[1m";
+
+function printStartup(url) {
+  console.log("");
+  console.log(`${bold}  The Guild${reset} ${dim}v${version}${reset}`);
+  console.log(`${dim}  Mode:${reset}  ${modeColor}${mode}${reset}`);
+  console.log(`${dim}  URL:${reset}   ${url}`);
+  if (!hasOpenClaw) {
+    console.log(`${dim}  Docs:${reset}  https://docs.openclaw.dev/install`);
+  }
+  console.log("");
+}
 
 if (dev) {
   const devArgs = ["next", "dev", "--turbopack", "--port", String(port)];
   if (lan) {
     devArgs.push("--hostname", "0.0.0.0");
   }
+
+  printStartup(`http://${hostname}:${port}`);
 
   const child = spawn("npx", devArgs, {
     stdio: "inherit",
@@ -66,7 +93,7 @@ if (dev) {
   process.env.PORT = String(port);
   process.env.HOSTNAME = hostname;
 
-  console.log(`The Guild running at http://${hostname}:${port}`);
+  printStartup(`http://${hostname}:${port}`);
 
   const standaloneDir = join(__dirname, "..", ".next", "standalone");
   process.chdir(standaloneDir);

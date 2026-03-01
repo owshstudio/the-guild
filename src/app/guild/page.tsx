@@ -3,15 +3,20 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Agent, CommandEntry } from "@/lib/types";
 import { useAgents } from "@/lib/data/use-agents";
+import { useDataSource } from "@/lib/data/data-provider";
 import { useDispatchContext } from "@/components/dispatch/dispatch-provider";
 import { useActions } from "@/lib/data/use-actions";
 import { useToasts } from "@/components/toast-provider";
 import { ConfirmDialog } from "@/components/actions/confirm-dialog";
 import PixelOfficeCanvas from "@/components/pixel-office/canvas";
 import { motion, AnimatePresence } from "framer-motion";
+import { OPENCLAW_DOCS_URL } from "@/lib/constants";
+
+const WELCOME_DISMISSED_KEY = "guild-welcome-dismissed";
 
 export default function GuildPage() {
   const { agents } = useAgents();
+  const { dataSource } = useDataSource();
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const { openDispatch } = useDispatchContext();
   const { execute, isExecuting } = useActions();
@@ -21,6 +26,16 @@ export default function GuildPage() {
   const [commandInput, setCommandInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const activeStreams = useRef<Set<EventSource>>(new Set());
+
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem(WELCOME_DISMISSED_KEY);
+  });
+
+  const dismissWelcome = () => {
+    setShowWelcome(false);
+    localStorage.setItem(WELCOME_DISMISSED_KEY, "true");
+  };
 
   // Clean up all active EventSources on unmount
   useEffect(() => {
@@ -150,6 +165,90 @@ export default function GuildPage() {
             CLICK AN AGENT TO INSPECT
           </p>
         </div>
+
+        {/* Welcome Overlay */}
+        <AnimatePresence>
+          {dataSource === "mock" && showWelcome && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="relative mx-4 w-full max-w-md rounded-2xl border border-[#1f1f1f] bg-[#0c0c0c] p-6 shadow-2xl"
+              >
+                {/* Close button */}
+                <button
+                  onClick={dismissWelcome}
+                  className="absolute right-3 top-3 rounded-lg p-1.5 text-[#525252] transition hover:bg-white/[0.05] hover:text-[#a3a3a3]"
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+
+                <h2 className="text-lg font-semibold text-white">Welcome to The Guild</h2>
+                <p className="mt-1.5 text-sm text-[#737373]">
+                  You&apos;re viewing demo data. Connect an OpenClaw gateway to see your live agents.
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  <div className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#DF4F15] to-[#F9425F] text-xs font-bold text-white">
+                      1
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-[#e5e5e5]">Install OpenClaw</p>
+                      <p className="text-xs text-[#525252]">The agent orchestration gateway</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#F9425F] to-[#A326B5] text-xs font-bold text-white">
+                      2
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-[#e5e5e5]">Start the gateway</p>
+                      <code className="mt-1 block rounded-md border border-[#1f1f1f] bg-[#141414] px-2.5 py-1.5 font-mono text-xs text-[#DF4F15]">
+                        openclaw gateway start
+                      </code>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#A326B5] to-[#DF4F15] text-xs font-bold text-white">
+                      3
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-[#e5e5e5]">Auto-detects and switches to live</p>
+                      <p className="text-xs text-[#525252]">The Guild connects automatically</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <a
+                    href={OPENCLAW_DOCS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 rounded-lg bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5] px-4 py-2 text-center text-sm font-medium text-white transition hover:opacity-90"
+                  >
+                    Install OpenClaw
+                  </a>
+                  <button
+                    onClick={dismissWelcome}
+                    className="flex-1 rounded-lg border border-[#2a2a2a] px-4 py-2 text-sm font-medium text-[#d4d4d4] transition hover:border-[#3a3a3a] hover:bg-white/[0.03]"
+                  >
+                    Explore Demo
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Legend overlay */}
         <div className="absolute bottom-4 left-4 z-10 flex items-center gap-5 text-[10px] text-white/30 font-mono bg-black/40 rounded-lg px-3 py-2 backdrop-blur-sm">

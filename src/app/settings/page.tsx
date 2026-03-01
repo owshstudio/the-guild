@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { loadSettings, saveSettings, type GuildSettings } from "@/lib/settings";
 import { useAgents } from "@/lib/data/use-agents";
+import { useDataSource } from "@/lib/data/data-provider";
 import { useToasts } from "@/components/toast-provider";
 import { checkGatewayHealth } from "@/lib/gateway";
 import { APP_VERSION } from "@/lib/version";
+import { OPENCLAW_DOCS_URL } from "@/lib/constants";
 
 function useNetworkInfo() {
   const [lanIp, setLanIp] = useState<string | null>(null);
@@ -45,6 +47,7 @@ function Toggle({
 
 export default function SettingsPage() {
   const { agents } = useAgents();
+  const { dataSource } = useDataSource();
   const { addToast } = useToasts();
   const lanIp = useNetworkInfo();
   const [settings, setSettings] = useState<GuildSettings | null>(() => {
@@ -134,6 +137,59 @@ export default function SettingsPage() {
       </div>
 
       <div className="max-w-2xl space-y-6">
+        {/* Getting Started — shown only in demo mode */}
+        {dataSource === "mock" && (
+          <div className="rounded-xl border border-[#DF4F15]/20 bg-gradient-to-br from-[#DF4F15]/[0.05] via-[#F9425F]/[0.05] to-[#A326B5]/[0.05] p-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">
+              Getting Started
+            </h2>
+            <p className="mt-2 text-sm text-[#737373]">
+              You&apos;re running in demo mode with sample data. Follow these steps to connect live agents:
+            </p>
+            <div className="mt-4 space-y-3">
+              <div className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#DF4F15] to-[#F9425F] text-xs font-bold text-white">
+                  1
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-[#e5e5e5]">Install OpenClaw</p>
+                  <p className="text-xs text-[#525252]">
+                    The agent orchestration gateway &mdash;{" "}
+                    <a
+                      href={OPENCLAW_DOCS_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#DF4F15] underline underline-offset-2 transition hover:text-[#F9425F]"
+                    >
+                      docs.openclaw.dev/install
+                    </a>
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#F9425F] to-[#A326B5] text-xs font-bold text-white">
+                  2
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-[#e5e5e5]">Start the gateway</p>
+                  <code className="mt-1 block rounded-md border border-[#1f1f1f] bg-[#141414] px-2.5 py-1.5 font-mono text-xs text-[#DF4F15]">
+                    openclaw gateway start
+                  </code>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#A326B5] to-[#DF4F15] text-xs font-bold text-white">
+                  3
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-[#e5e5e5]">Auto-detects and switches to live</p>
+                  <p className="text-xs text-[#525252]">The Guild connects automatically when the gateway is running</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Gateway Configuration */}
         <div className="rounded-xl border border-[#1f1f1f] bg-[#0c0c0c] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">

@@ -17,3 +17,5 @@ export const COLORS = {
 
 export const ACCENT_GRADIENT = "linear-gradient(135deg, #DF4F15, #F9425F, #A326B5)";
 export const ACCENT_GRADIENT_CSS = "from-[#DF4F15] via-[#F9425F] to-[#A326B5]";
+
+export const OPENCLAW_DOCS_URL = "https://docs.openclaw.dev/install";

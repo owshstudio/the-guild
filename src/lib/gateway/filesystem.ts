@@ -83,7 +83,25 @@ export async function listAgentDirs(): Promise<string[]> {
   try {
     const config = await getConfig();
     const entries = await readdir(config.agentsPath, { withFileTypes: true });
-    return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+
+    // Also check for sub-agent directories one level deeper
+    // (e.g. agents/main/sub-agents/temp-worker/)
+    for (const dir of [...dirs]) {
+      try {
+        const subAgentsDir = path.join(config.agentsPath, dir, "sub-agents");
+        const subEntries = await readdir(subAgentsDir, { withFileTypes: true });
+        for (const sub of subEntries) {
+          if (sub.isDirectory()) {
+            dirs.push(`${dir}/sub-agents/${sub.name}`);
+          }
+        }
+      } catch {
+        // no sub-agents directory
+      }
+    }
+
+    return dirs;
   } catch {
     return [];
   }

@@ -26,10 +26,10 @@ export default function AgentCard({ agent, onClick }: AgentCardProps) {
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="flex h-11 w-11 items-center justify-center rounded-xl text-xl"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl leading-none"
             style={{ background: agent.color + "20" }}
           >
-            {agent.emoji}
+            <span className="flex items-center justify-center">{agent.emoji}</span>
           </div>
           <div>
             <h3 className="font-semibold text-white">{agent.name}</h3>

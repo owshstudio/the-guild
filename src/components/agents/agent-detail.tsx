@@ -27,10 +27,10 @@ export default function AgentDetail({ agent, onClose }: AgentDetailProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div
-            className="flex h-14 w-14 items-center justify-center rounded-xl text-3xl"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-3xl leading-none"
             style={{ background: agent.color + "20" }}
           >
-            {agent.emoji}
+            <span className="flex items-center justify-center">{agent.emoji}</span>
           </div>
           <div>
             <h2 className="text-xl font-semibold text-white">{agent.name}</h2>

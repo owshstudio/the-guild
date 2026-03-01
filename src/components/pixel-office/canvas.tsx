@@ -6,8 +6,8 @@ import {
   OFFICE,
   drawTileFloor,
   drawFurnitureBack,
-  drawFurnitureFront,
 } from "./office-map";
+import { getFurnitureCanvas } from "./furniture-sprites";
 import {
   AgentEntity,
   createAgentEntities,
@@ -424,20 +424,49 @@ export default function PixelOfficeCanvas({
       // Pass 2: furniture behind agents
       drawFurnitureBack(ctx, tilemap);
 
-      // Pass 3: agents Y-sorted (only those in current room)
+      // Pass 3+4: agents and front-furniture Y-interleaved
+      // Collect chair tiles as drawable items alongside agents, then sort by Y
+      // so agents walking below a chair row render in front of those chairs.
       const visibleAgents = rm.getCurrentAgents(allAgents);
       const edit = editModeRef.current;
-      const sorted = [...visibleAgents].sort((a, b) => a.y - b.y);
-      sorted.forEach((agent) => {
-        // Skip dragged agent in normal draw (draw at mouse position instead)
-        if (edit.active && edit.draggedAgentId === agent.id && edit.mousePixel) {
-          return;
-        }
-        drawAgent(ctx, agent, spriteScale);
-      });
 
-      // Pass 4: furniture in front of agents
-      drawFurnitureFront(ctx, tilemap);
+      type Drawable =
+        | { kind: "agent"; agent: AgentEntity; y: number }
+        | { kind: "chair"; col: number; row: number; y: number };
+
+      const drawables: Drawable[] = visibleAgents.map((agent) => ({
+        kind: "agent" as const,
+        agent,
+        y: agent.y,
+      }));
+
+      // Add chair tiles as drawables
+      const ts = OFFICE.tileSize;
+      for (let row = 0; row < tilemap.rows; row++) {
+        for (let col = 0; col < tilemap.cols; col++) {
+          if (tilemap.getTile(col, row) === TileType.Chair) {
+            drawables.push({
+              kind: "chair",
+              col,
+              row,
+              y: row * ts,
+            });
+          }
+        }
+      }
+
+      drawables.sort((a, b) => a.y - b.y);
+      drawables.forEach((d) => {
+        if (d.kind === "agent") {
+          if (edit.active && edit.draggedAgentId === d.agent.id && edit.mousePixel) {
+            return;
+          }
+          drawAgent(ctx, d.agent, spriteScale);
+        } else {
+          const chairCanvas = getFurnitureCanvas("chair");
+          ctx.drawImage(chairCanvas, d.col * ts, d.row * ts, ts, ts);
+        }
+      });
 
       // Reset alpha
       if (transitioning) {

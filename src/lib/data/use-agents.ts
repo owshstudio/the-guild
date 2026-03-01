@@ -5,7 +5,7 @@ import type { Agent } from "@/lib/types";
 import { agents as mockAgents } from "@/lib/mock-data";
 import { useEventSource } from "./use-event-source";
 
-const BASE_INTERVAL = 15_000;
+const BASE_INTERVAL = 5_000;
 const MAX_BACKOFF_INTERVAL = 120_000;
 
 export function useAgents() {

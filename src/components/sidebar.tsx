@@ -134,7 +134,7 @@ export default function Sidebar() {
                   </span>
                 )}
                 {isActive && !item.badge && (
-                  <div className="ml-auto h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#DF4F15] to-[#F9425F]" />
+                  <div className="ml-auto h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5]" />
                 )}
               </Link>
             );
@@ -152,7 +152,7 @@ export default function Sidebar() {
             Settings
           </Link>
           <div className="mt-3 flex items-center gap-3 px-3">
-            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#DF4F15] to-[#A326B5]" />
+            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#DF4F15] via-[#F9425F] to-[#A326B5]" />
             <div>
               <p className="text-xs font-medium text-[#d4d4d4]">Guild Admin</p>
               <p className="text-[10px] text-[#525252]">{APP_VERSION}</p>

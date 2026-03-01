@@ -56,9 +56,13 @@ const EXTRA_POSITIONS: { col: number; row: number }[] = [
   { col: 3, row: 5 },  // open floor
   { col: 6, row: 5 },  // open floor
   { col: 10, row: 5 }, // open floor
+  { col: 12, row: 5 }, // open floor
+  { col: 4, row: 7 },  // open floor
+  { col: 7, row: 7 },  // open floor
+  { col: 11, row: 7 }, // open floor
 ];
 
-const MAX_OFFICE_AGENTS = 6;
+const MAX_OFFICE_AGENTS = 10;
 
 export function createAgentEntities(
   tilemap: TileMap,
@@ -432,33 +436,46 @@ export function drawAgent(
 
   // Name label
   const nameX = agent.x + 8 * scale;
-  const nameY = agent.y - 12;
-  ctx.font = "bold 11px monospace";
+  const nameY = agent.y - 14;
+  ctx.font = "bold 10px monospace";
   ctx.textAlign = "center";
 
-  // Label background
+  // Label background — dark pill with rounded corners
   const tw = ctx.measureText(agent.name).width;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-  ctx.fillRect(nameX - tw / 2 - 6, nameY - 10, tw + 12, 16);
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.1)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(nameX - tw / 2 - 6, nameY - 10, tw + 12, 16);
+  const lw = tw + 14;
+  const lh = 18;
+  const lx = nameX - lw / 2;
+  const ly = nameY - 11;
+  const radius = 5;
 
-  ctx.fillStyle = "#333333";
-  ctx.fillText(agent.name, nameX, nameY + 2);
-
-  // Status dot
-  const dotX = nameX;
-  const dotY = nameY - 16;
-  const statusColor = getStatusColor(agent.status);
   ctx.beginPath();
-  ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+  ctx.moveTo(lx + radius, ly);
+  ctx.lineTo(lx + lw - radius, ly);
+  ctx.quadraticCurveTo(lx + lw, ly, lx + lw, ly + radius);
+  ctx.lineTo(lx + lw, ly + lh - radius);
+  ctx.quadraticCurveTo(lx + lw, ly + lh, lx + lw - radius, ly + lh);
+  ctx.lineTo(lx + radius, ly + lh);
+  ctx.quadraticCurveTo(lx, ly + lh, lx, ly + lh - radius);
+  ctx.lineTo(lx, ly + radius);
+  ctx.quadraticCurveTo(lx, ly, lx + radius, ly);
+  ctx.closePath();
+
+  ctx.fillStyle = "rgba(20, 20, 20, 0.88)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Status dot inline with name
+  const statusColor = getStatusColor(agent.status);
+  const dotX = nameX - tw / 2 - 4;
+  ctx.beginPath();
+  ctx.arc(dotX, nameY, 3, 0, Math.PI * 2);
   ctx.fillStyle = statusColor;
   ctx.fill();
-  ctx.beginPath();
-  ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
-  ctx.fillStyle = statusColor + "30";
-  ctx.fill();
+
+  ctx.fillStyle = "#e5e5e5";
+  ctx.fillText(agent.name, nameX + 2, nameY + 3);
 
   ctx.textAlign = "left";
 

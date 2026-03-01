@@ -28,33 +28,45 @@ export function useTeams() {
 
   const createTeam = useCallback(
     async (team: Omit<Team, "id" | "createdAt">) => {
-      const res = await fetch("/api/gateway/teams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(team),
-      });
-      const json = await res.json();
-      if (json.data) setTeams(json.data);
+      try {
+        const res = await fetch("/api/gateway/teams", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(team),
+        });
+        const json = await res.json();
+        if (json.data) setTeams(json.data);
+      } catch {
+        // network error — keep current state
+      }
     },
     []
   );
 
   const updateTeam = useCallback(async (team: Team) => {
-    const res = await fetch("/api/gateway/teams", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(team),
-    });
-    const json = await res.json();
-    if (json.data) setTeams(json.data);
+    try {
+      const res = await fetch("/api/gateway/teams", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(team),
+      });
+      const json = await res.json();
+      if (json.data) setTeams(json.data);
+    } catch {
+      // network error — keep current state
+    }
   }, []);
 
   const deleteTeam = useCallback(async (id: string) => {
-    const res = await fetch(`/api/gateway/teams?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    const json = await res.json();
-    if (json.data) setTeams(json.data);
+    try {
+      const res = await fetch(`/api/gateway/teams?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.data) setTeams(json.data);
+    } catch {
+      // network error — keep current state
+    }
   }, []);
 
   return { teams, isLive, isLoading, createTeam, updateTeam, deleteTeam };

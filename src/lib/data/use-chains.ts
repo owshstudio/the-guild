@@ -51,31 +51,43 @@ export function useChains() {
   const activeChains = chains.filter((c) => c.status === "active");
 
   const createChain = useCallback(async (chain: TaskChain) => {
-    const res = await fetch("/api/gateway/chains", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(chain),
-    });
-    const json = await res.json();
-    if (json.data) setChains(json.data);
+    try {
+      const res = await fetch("/api/gateway/chains", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chain),
+      });
+      const json = await res.json();
+      if (json.data) setChains(json.data);
+    } catch {
+      // network error — keep current state
+    }
   }, []);
 
   const updateChain = useCallback(async (chain: TaskChain) => {
-    const res = await fetch("/api/gateway/chains", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(chain),
-    });
-    const json = await res.json();
-    if (json.data) setChains(json.data);
+    try {
+      const res = await fetch("/api/gateway/chains", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chain),
+      });
+      const json = await res.json();
+      if (json.data) setChains(json.data);
+    } catch {
+      // network error — keep current state
+    }
   }, []);
 
   const deleteChain = useCallback(async (id: string) => {
-    const res = await fetch(`/api/gateway/chains?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    const json = await res.json();
-    if (json.data) setChains(json.data);
+    try {
+      const res = await fetch(`/api/gateway/chains?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.data) setChains(json.data);
+    } catch {
+      // network error — keep current state
+    }
   }, []);
 
   const pauseChain = useCallback(

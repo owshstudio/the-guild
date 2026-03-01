@@ -17,9 +17,22 @@ export async function GET() {
   }
 }
 
+function validateJobFields(job: Record<string, unknown>): string | null {
+  if (!job.name || typeof job.name !== "string") return "Missing name";
+  if (!job.agentId || typeof job.agentId !== "string") return "Missing agentId";
+  if (!job.schedule || typeof job.schedule !== "object") return "Missing schedule";
+  if (!job.payload || typeof job.payload !== "object") return "Missing payload";
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const job = (await req.json()) as CronJob;
+
+    const err = validateJobFields(job as unknown as Record<string, unknown>);
+    if (err) {
+      return NextResponse.json({ success: false, error: err }, { status: 400 });
+    }
 
     // Prevent client from overriding the server-generated id
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- strip server-managed fields
@@ -43,6 +56,12 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const job = (await req.json()) as CronJob;
+
+    const err = validateJobFields(job as unknown as Record<string, unknown>);
+    if (err) {
+      return NextResponse.json({ success: false, error: err }, { status: 400 });
+    }
+
     const data = (await readCronJobs()) as { version: number; jobs: CronJob[] };
     const idx = data.jobs.findIndex((j) => j.id === job.id);
     if (idx === -1) {

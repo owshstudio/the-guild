@@ -9,7 +9,7 @@ import { CronDeleteConfirm } from "@/components/cron/cron-delete-confirm";
 import type { CronJob } from "@/lib/types";
 
 export default function CronPage() {
-  const { cron, isLoading, createJob, updateJob, deleteJob, toggleJob } = useCron();
+  const { cron, isLoading, error, createJob, updateJob, deleteJob, toggleJob } = useCron();
   const { addToast } = useToasts();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,9 +57,12 @@ export default function CronPage() {
 
   const handleToggle = async (id: string) => {
     const job = cron.jobs.find((j) => j.id === id);
+    if (!job) return;
     const res = await toggleJob(id);
-    if (res.success && job) {
+    if (res.success) {
       addToast("info", job.enabled ? "Job disabled" : "Job enabled", `"${job.name}"`);
+    } else {
+      addToast("error", "Toggle failed", res.error || "Could not update job");
     }
   };
 
@@ -90,6 +93,11 @@ export default function CronPage() {
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#525252] border-t-white" />
+        </div>
+      ) : error && cron.jobs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-red-500/30 bg-red-500/5 py-16">
+          <p className="text-sm text-red-400">Failed to load cron jobs</p>
+          <p className="mt-1 text-xs text-[#525252]">{error}</p>
         </div>
       ) : (
         <CronJobList

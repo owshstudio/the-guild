@@ -30,46 +30,62 @@ export function useWebhooks() {
 
   const createWebhook = useCallback(
     async (data: Partial<WebhookConfig>) => {
-      await fetch("/api/gateway/webhooks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      await fetchWebhooks();
+      try {
+        await fetch("/api/gateway/webhooks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        await fetchWebhooks();
+      } catch {
+        // network error
+      }
     },
     [fetchWebhooks]
   );
 
   const updateWebhook = useCallback(
     async (data: Partial<WebhookConfig> & { id: string }) => {
-      await fetch("/api/gateway/webhooks", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      await fetchWebhooks();
+      try {
+        await fetch("/api/gateway/webhooks", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        await fetchWebhooks();
+      } catch {
+        // network error
+      }
     },
     [fetchWebhooks]
   );
 
   const deleteWebhook = useCallback(
     async (id: string) => {
-      await fetch(`/api/gateway/webhooks?id=${id}`, { method: "DELETE" });
-      await fetchWebhooks();
+      try {
+        await fetch(`/api/gateway/webhooks?id=${id}`, { method: "DELETE" });
+        await fetchWebhooks();
+      } catch {
+        // network error
+      }
     },
     [fetchWebhooks]
   );
 
   const testWebhook = useCallback(
     async (id: string) => {
-      const res = await fetch("/api/gateway/webhooks/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ webhookId: id }),
-      });
-      const json = await res.json();
-      await fetchWebhooks();
-      return json.data;
+      try {
+        const res = await fetch("/api/gateway/webhooks/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ webhookId: id }),
+        });
+        const json = await res.json();
+        await fetchWebhooks();
+        return json.data;
+      } catch {
+        return undefined;
+      }
     },
     [fetchWebhooks]
   );

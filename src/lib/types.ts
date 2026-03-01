@@ -162,7 +162,13 @@ export interface CronScheduleAt {
   at: string;
 }
 
-export type CronSchedule = CronScheduleEvery | CronScheduleAt;
+export interface CronScheduleCron {
+  type: "cron";
+  expr: string;
+  tz?: string;
+}
+
+export type CronSchedule = CronScheduleEvery | CronScheduleAt | CronScheduleCron;
 
 export interface CronPayloadAgentTurn {
   kind: "agentTurn";
@@ -174,21 +180,23 @@ export interface CronPayloadAgentTurn {
 export interface CronPayloadSystemEvent {
   kind: "systemEvent";
   description: string;
-  event: { type: string; message: string };
+  event?: { type: string; message: string };
 }
 
 export type CronPayload = CronPayloadAgentTurn | CronPayloadSystemEvent;
 
 export interface CronDelivery {
-  type: "channel";
+  type: string;
   channel: string;
-  address: string;
+  address?: string;
 }
 
 export interface CronJobStatus {
   lastRunAt?: string;
-  lastRunStatus?: "success" | "error" | "skipped";
+  lastRunStatus?: "success" | "error" | "ok" | "skipped";
   lastRunError?: string;
+  consecutiveErrors?: number;
+  nextRunAt?: string;
 }
 
 export interface CronJob {

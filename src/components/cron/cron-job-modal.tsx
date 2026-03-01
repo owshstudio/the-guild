@@ -26,11 +26,21 @@ const INTERVAL_PRESETS = [
   { label: "24 hr", ms: 24 * 60 * 60_000 },
 ];
 
+/** Convert any date string to datetime-local format (YYYY-MM-DDTHH:mm) */
+function toDatetimeLocal(value: string): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalProps) {
   const { agents } = useAgents();
 
   const [name, setName] = useState("");
-  const [scheduleType, setScheduleType] = useState<"every" | "at">("every");
+  const [scheduleType, setScheduleType] = useState<"every" | "at" | "cron">("every");
+  const [cronExpr, setCronExpr] = useState("");
   const [intervalMs, setIntervalMs] = useState(30 * 60_000);
   const [atDatetime, setAtDatetime] = useState("");
   const [agentId, setAgentId] = useState(agents[0]?.id || "main");
@@ -69,25 +79,31 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
       setScheduleType(editJob.schedule.type);
       if (editJob.schedule.type === "every") {
         setIntervalMs(editJob.schedule.intervalMs);
-      } else {
-        setAtDatetime(editJob.schedule.at);
+      } else if (editJob.schedule.type === "cron") {
+        setCronExpr(editJob.schedule.expr);
+      } else if (editJob.schedule.type === "at") {
+        setAtDatetime(toDatetimeLocal(editJob.schedule.at));
       }
       setAgentId(editJob.agentId);
       setSessionTarget(editJob.sessionTarget);
       setWakeMode(editJob.wakeMode);
-      setPayloadKind(editJob.payload.kind);
-      setDescription(editJob.payload.description);
-      if (editJob.payload.kind === "agentTurn") {
+      setPayloadKind(editJob.payload?.kind || "agentTurn");
+      setDescription(editJob.payload?.description || "");
+      if (editJob.payload?.kind === "agentTurn") {
         setSystemPrompt(editJob.payload.systemPrompt || "");
         setUserPrompt(editJob.payload.userPrompt || "");
-      } else {
-        setEventType(editJob.payload.event.type);
-        setEventMessage(editJob.payload.event.message);
+        setEventType("");
+        setEventMessage("");
+      } else if (editJob.payload?.kind === "systemEvent") {
+        setEventType(editJob.payload.event?.type || "");
+        setEventMessage(editJob.payload.event?.message || "");
+        setSystemPrompt("");
+        setUserPrompt("");
       }
       if (editJob.delivery) {
         setDeliveryEnabled(true);
         setDeliveryChannel(editJob.delivery.channel);
-        setDeliveryAddress(editJob.delivery.address);
+        setDeliveryAddress(editJob.delivery.address || "");
       } else {
         setDeliveryEnabled(false);
       }
@@ -97,6 +113,7 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
       setScheduleType("every");
       setIntervalMs(30 * 60_000);
       setAtDatetime("");
+      setCronExpr("");
       setAgentId(agents[0]?.id || "main");
       setSessionTarget("new");
       setWakeMode("auto");
@@ -116,11 +133,16 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
 
   const handleSave = async () => {
     if (!name.trim() || !description.trim()) return;
+    if (scheduleType === "at" && (!atDatetime || isNaN(new Date(atDatetime).getTime()))) return;
+    if (scheduleType === "every" && intervalMs <= 0) return;
+    if (scheduleType === "cron" && !cronExpr.trim()) return;
     setIsSaving(true);
 
     const schedule: CronSchedule =
       scheduleType === "every"
         ? { type: "every", intervalMs }
+        : scheduleType === "cron"
+        ? { type: "cron", expr: cronExpr }
         : { type: "at", at: atDatetime };
 
     const payload: CronPayload =
@@ -217,6 +239,16 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
                     Recurring
                   </button>
                   <button
+                    onClick={() => setScheduleType("cron")}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                      scheduleType === "cron"
+                        ? "bg-white/10 text-white"
+                        : "text-[#737373] hover:text-[#a3a3a3]"
+                    }`}
+                  >
+                    Cron
+                  </button>
+                  <button
                     onClick={() => setScheduleType("at")}
                     className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
                       scheduleType === "at"
@@ -244,6 +276,13 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
                       </button>
                     ))}
                   </div>
+                ) : scheduleType === "cron" ? (
+                  <input
+                    value={cronExpr}
+                    onChange={(e) => setCronExpr(e.target.value)}
+                    placeholder="e.g. */30 9-19 * * *"
+                    className={inputClass + " font-mono"}
+                  />
                 ) : (
                   <>
                     <input
@@ -466,7 +505,13 @@ export function CronJobModal({ isOpen, onClose, onSave, editJob }: CronJobModalP
               </button>
               <button
                 onClick={handleSave}
-                disabled={isSaving || !name.trim() || !description.trim()}
+                disabled={
+                  isSaving ||
+                  !name.trim() ||
+                  !description.trim() ||
+                  (scheduleType === "at" && !atDatetime) ||
+                  (scheduleType === "cron" && !cronExpr.trim())
+                }
                 className="rounded-lg bg-gradient-to-r from-[#DF4F15] via-[#F9425F] to-[#A326B5] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : editJob ? "Update" : "Create"}

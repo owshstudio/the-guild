@@ -2,9 +2,42 @@
 
 import type { CronSchedule } from "@/lib/types";
 
+function describeCronExpr(expr: string, tz?: string): string {
+  const parts = expr.split(/\s+/);
+  if (parts.length < 5) return expr;
+
+  const [min, hour, , , dow] = parts;
+
+  // Common patterns
+  if (min.startsWith("*/")) {
+    const interval = parseInt(min.slice(2), 10);
+    if (hour === "*") return `Every ${interval} min`;
+    return `Every ${interval} min (${hour}h)`;
+  }
+  if (hour.startsWith("*/")) {
+    const interval = parseInt(hour.slice(2), 10);
+    return `Every ${interval} hr${interval > 1 ? "s" : ""}`;
+  }
+
+  // Specific time
+  const h = parseInt(hour, 10);
+  const m = parseInt(min, 10);
+  if (!isNaN(h) && !isNaN(m)) {
+    const period = h >= 12 ? "PM" : "AM";
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    const mStr = String(m).padStart(2, "0");
+    const dayPart = dow === "0" ? " Sun" : dow === "1-5" ? " weekdays" : dow !== "*" ? ` (dow ${dow})` : "";
+    const tzLabel = tz ? ` ${tz.split("/").pop()}` : "";
+    return `${h12}:${mStr} ${period}${dayPart}${tzLabel}`;
+  }
+
+  return expr;
+}
+
 function formatSchedule(schedule: CronSchedule): string {
   if (schedule.type === "every") {
     const ms = schedule.intervalMs;
+    if (ms <= 0) return "Invalid interval";
     if (ms < 60_000) return `Every ${Math.round(ms / 1000)}s`;
     if (ms < 3_600_000) return `Every ${Math.round(ms / 60_000)} min`;
     if (ms < 86_400_000) {
@@ -15,7 +48,14 @@ function formatSchedule(schedule: CronSchedule): string {
     return `Every ${days} day${days > 1 ? "s" : ""}`;
   }
 
+  if (schedule.type === "cron") {
+    return describeCronExpr(schedule.expr, schedule.tz);
+  }
+
+  // type: "at"
+  if (!schedule.at) return "No date set";
   const date = new Date(schedule.at);
+  if (isNaN(date.getTime())) return "Invalid date";
   return date.toLocaleString("en-US", {
     month: "short",
     day: "numeric",

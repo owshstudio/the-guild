@@ -37,7 +37,7 @@ interface PixelOfficeCanvasProps {
 // Edit mode button layout
 const EDIT_BTN_W = 60;
 const EDIT_BTN_H = 22;
-const EDIT_BTN_X = 8;
+const EDIT_BTN_X = 960 - 60 - 8;
 const EDIT_BTN_Y = 8;
 
 export default function PixelOfficeCanvas({

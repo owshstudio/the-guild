@@ -10,10 +10,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = await request.json();
+  let body: { token?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
+
   const provided = body?.token;
 
-  if (!provided || provided !== token) {
+  if (!provided || typeof provided !== "string" || provided !== token) {
     return NextResponse.json(
       { error: "Invalid token" },
       { status: 401 }

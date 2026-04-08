@@ -49,6 +49,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |------|---------|-------------|
 | `--port <number>` | `3000` | Port to listen on |
 | `--lan` | off | Bind to 0.0.0.0 (accessible from other devices on your network) |
+| `--tunnel` | off | Create a public HTTPS tunnel via Cloudflare (free, no account needed) |
 | `--dev` | off | Run in development mode with Turbopack |
 
 ```bash
@@ -122,6 +123,18 @@ If OpenClaw is configured with `tailscale.mode` in `openclaw.json`:
 1. Install [Tailscale](https://tailscale.com) on both machines
 2. Run `npx @owshstudio/the-guild --lan` on the agent machine
 3. Open `http://<tailscale-ip>:3000` from anywhere
+
+### Tunnel (Anywhere)
+
+Create a public HTTPS URL with a single flag — no accounts, no config:
+
+```bash
+npx @owshstudio/the-guild --tunnel
+```
+
+This starts a [Cloudflare Quick Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/do-more-with-tunnels/trycloudflare/), prints a QR code with a magic auth link, and displays the tunnel URL. Scan the QR on your phone to auto-authenticate and open the dashboard.
+
+Auth is enforced automatically — a 256-bit token is generated if `GUILD_API_TOKEN` is not already set. Without the token, API calls return 401.
 
 ### SSH Tunnel
 

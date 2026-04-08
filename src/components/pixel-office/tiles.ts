@@ -29,6 +29,12 @@ export enum TileType {
   ServerRack,
   Whiteboard,
   LargeTable,
+  WallClock,
+  Poster,
+  FilingCabinet,
+  Printer,
+  WaterCooler,
+  TrashCan,
 }
 
 export interface TileProperties {
@@ -129,6 +135,36 @@ const TILE_PROPERTIES: Record<TileType, TileProperties> = {
     walkable: false,
     zLayer: "furniture-back",
     label: "Large Table",
+  },
+  [TileType.WallClock]: {
+    walkable: false,
+    zLayer: "floor",
+    label: "Wall Clock",
+  },
+  [TileType.Poster]: {
+    walkable: false,
+    zLayer: "floor",
+    label: "Poster",
+  },
+  [TileType.FilingCabinet]: {
+    walkable: false,
+    zLayer: "furniture-back",
+    label: "Filing Cabinet",
+  },
+  [TileType.Printer]: {
+    walkable: false,
+    zLayer: "furniture-back",
+    label: "Printer",
+  },
+  [TileType.WaterCooler]: {
+    walkable: false,
+    zLayer: "furniture-back",
+    label: "Water Cooler",
+  },
+  [TileType.TrashCan]: {
+    walkable: true,
+    zLayer: "floor",
+    label: "Trash Can",
   },
 };
 

@@ -2,17 +2,11 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Agent } from "@/lib/types";
-import {
-  OFFICE,
-  drawTileFloor,
-  drawFurnitureBack,
-} from "./office-map";
-import { getFurnitureCanvas } from "./furniture-sprites";
+import { OFFICE } from "./office-map";
 import {
   AgentEntity,
   createAgentEntities,
   updateAgent,
-  drawAgent,
   isAgentHovered,
 } from "./agent-entity";
 import { RoomManager } from "./room-manager";
@@ -29,22 +23,44 @@ import {
 import CharacterCreator from "@/components/character-creator/character-creator";
 import { loadSettings, GuildSettings } from "@/lib/settings";
 
+// PixiJS imports
+import { createScene, destroyScene, PixelOfficeScene } from "./pixi-scene";
+import { buildFloorLayer, buildFurnitureLayer, ChairSprite, clearAllTileTextures } from "./pixi-tiles";
+import {
+  AgentDisplayObjects,
+  createAgentDisplay,
+  updateAgentDisplay,
+  destroyAgentDisplay,
+} from "./pixi-agents";
+import {
+  createEditButton,
+  updateEditButton,
+  createEditModeOverlay,
+  updateEditModeOverlays,
+  updateHoverOverlay,
+  EDIT_BTN_W,
+  EDIT_BTN_H,
+  EDIT_BTN_X,
+  EDIT_BTN_Y,
+  createRoomTabBar,
+  RoomTabBar,
+} from "./pixi-overlays";
+import { Graphics, Sprite, Text, TextStyle } from "pixi.js";
+import { getSpriteTexture, getCharacterSprites, SpriteData, clearAllSpriteTextures } from "./sprites";
+import { clearAllFurnitureTextures } from "./furniture-sprites";
+import { createEffects, updateEffects, rebuildStaticEffects, EffectsState } from "./pixi-effects";
+
 interface PixelOfficeCanvasProps {
   onAgentClick: (agent: Agent | null) => void;
   agents?: Agent[];
 }
 
-// Edit mode button layout
-const EDIT_BTN_W = 60;
-const EDIT_BTN_H = 22;
-const EDIT_BTN_X = 960 - 60 - 8;
-const EDIT_BTN_Y = 8;
-
 export default function PixelOfficeCanvas({
   onAgentClick,
   agents: agentsProp,
 }: PixelOfficeCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<PixelOfficeScene | null>(null);
   const roomManagerRef = useRef(new RoomManager());
   const agentsRef = useRef<AgentEntity[]>(
     createAgentEntities(roomManagerRef.current.getCurrentTilemap(), agentsProp)
@@ -56,6 +72,17 @@ export default function PixelOfficeCanvas({
   const settingsRef = useRef<GuildSettings["appearance"]>(loadSettings().appearance);
   const [, forceRender] = useState(0);
   const [creatorAgentId, setCreatorAgentId] = useState<string | null>(null);
+
+  // Display object tracking
+  const agentDisplaysRef = useRef<Map<string, AgentDisplayObjects>>(new Map());
+  const chairSpritesRef = useRef<ChairSprite[]>([]);
+  const editButtonRef = useRef<ReturnType<typeof createEditButton> | null>(null);
+  const editOverlayRef = useRef<ReturnType<typeof createEditModeOverlay> | null>(null);
+  const hoverGraphicsRef = useRef<Graphics | null>(null);
+  const dragSpriteRef = useRef<Sprite | null>(null);
+  const effectsRef = useRef<EffectsState | null>(null);
+  const roomBannerRef = useRef<{ bg: Graphics; text: Text; fadeTimer: number } | null>(null);
+  const roomTabBarRef = useRef<RoomTabBar | null>(null);
 
   // Load settings on mount and listen for storage changes
   useEffect(() => {
@@ -84,11 +111,9 @@ export default function PixelOfficeCanvas({
     for (const liveAgent of agentsProp.slice(0, 6)) {
       const existing = current.find((a) => a.id === liveAgent.id);
       if (existing) {
-        // Update status
         existing.status = liveAgent.status;
         existing.name = liveAgent.name;
       } else if (current.length < 6) {
-        // Add new agent entity
         const newEntities = createAgentEntities(tilemap, [liveAgent]);
         if (newEntities.length > 0) {
           const entity = newEntities[0];
@@ -98,7 +123,6 @@ export default function PixelOfficeCanvas({
       }
     }
 
-    // Mark agents not in liveAgents as stopped
     for (const entity of current) {
       if (!agentsProp.find((a) => a.id === entity.id)) {
         entity.status = "stopped";
@@ -106,302 +130,374 @@ export default function PixelOfficeCanvas({
     }
   }, [agentsProp]);
 
-  const drawEditModeOverlays = useCallback(
-    (ctx: CanvasRenderingContext2D, deltaTime: number) => {
-      const edit = editModeRef.current;
-      if (!edit.active) return;
-
-      const rm = roomManagerRef.current;
-      const roomDef = rm.getCurrentRoom();
-      const ts = OFFICE.tileSize;
-
-      // Update pulse
-      pulseRef.current += deltaTime * 3;
-      const pulse = 0.3 + Math.sin(pulseRef.current) * 0.2;
-
-      // "EDIT MODE" banner
-      ctx.save();
-      ctx.fillStyle = `rgba(59, 130, 246, ${0.6 + pulse * 0.4})`;
-      ctx.font = "bold 14px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("EDIT MODE", OFFICE.width / 2, OFFICE.height - 16);
-      ctx.restore();
-
-      // Highlight chair tiles with pulsing border
-      const layout = roomDef.layout;
-      for (let row = 0; row < layout.length; row++) {
-        for (let col = 0; col < (layout[row]?.length ?? 0); col++) {
-          if (layout[row][col] === TileType.Chair) {
-            const x = col * ts;
-            const y = row * ts;
-
-            ctx.save();
-            ctx.strokeStyle = `rgba(59, 130, 246, ${pulse})`;
-            ctx.lineWidth = 2;
-            ctx.setLineDash([4, 4]);
-            ctx.strokeRect(x + 2, y + 2, ts - 4, ts - 4);
-            ctx.setLineDash([]);
-            ctx.restore();
-          }
-        }
-      }
-
-      // During drag: highlight valid targets
-      if (edit.draggedAgentId && edit.mousePixel) {
-        for (const target of edit.validDropTargets) {
-          const x = target.col * ts;
-          const y = target.row * ts;
-          ctx.save();
-          ctx.fillStyle = `rgba(34, 197, 94, ${pulse * 0.6})`;
-          ctx.fillRect(x, y, ts, ts);
-          ctx.strokeStyle = `rgba(34, 197, 94, ${0.5 + pulse})`;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x + 1, y + 1, ts - 2, ts - 2);
-          ctx.restore();
-        }
-
-        // Show red X if mouse is over an invalid tile
-        const tileCol = Math.floor(edit.mousePixel.x / ts);
-        const tileRow = Math.floor(edit.mousePixel.y / ts);
-        const isValid = edit.validDropTargets.some(
-          (t) => t.col === tileCol && t.row === tileRow
-        );
-        if (
-          !isValid &&
-          tileCol >= 0 && tileCol < 15 &&
-          tileRow >= 0 && tileRow < 10
-        ) {
-          const cx = tileCol * ts + ts / 2;
-          const cy = tileRow * ts + ts / 2;
-          ctx.save();
-          ctx.strokeStyle = "rgba(239, 68, 68, 0.7)";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(cx - 12, cy - 12);
-          ctx.lineTo(cx + 12, cy + 12);
-          ctx.moveTo(cx + 12, cy - 12);
-          ctx.lineTo(cx - 12, cy + 12);
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
-    },
-    []
-  );
-
-  const drawEditButton = useCallback(
-    (ctx: CanvasRenderingContext2D) => {
-      const edit = editModeRef.current;
-      const isActive = edit.active;
-
-      ctx.save();
-      ctx.fillStyle = isActive
-        ? "rgba(59, 130, 246, 0.9)"
-        : "rgba(255, 255, 255, 0.7)";
-      ctx.fillRect(EDIT_BTN_X, EDIT_BTN_Y, EDIT_BTN_W, EDIT_BTN_H);
-      ctx.strokeStyle = isActive
-        ? "rgba(37, 99, 235, 1)"
-        : "rgba(0, 0, 0, 0.15)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(EDIT_BTN_X, EDIT_BTN_Y, EDIT_BTN_W, EDIT_BTN_H);
-
-      ctx.font = "bold 10px monospace";
-      ctx.textAlign = "center";
-      ctx.fillStyle = isActive ? "#ffffff" : "#333333";
-      ctx.fillText(
-        isActive ? "Done" : "Edit",
-        EDIT_BTN_X + EDIT_BTN_W / 2,
-        EDIT_BTN_Y + EDIT_BTN_H / 2 + 3
-      );
-
-      // Pencil icon (simplified)
-      if (!isActive) {
-        const ix = EDIT_BTN_X + 10;
-        const iy = EDIT_BTN_Y + EDIT_BTN_H / 2;
-        ctx.strokeStyle = "#555";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(ix - 4, iy + 3);
-        ctx.lineTo(ix + 2, iy - 3);
-        ctx.lineTo(ix + 4, iy - 1);
-        ctx.lineTo(ix - 2, iy + 5);
-        ctx.closePath();
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    },
-    []
-  );
-
-  const draw = useCallback(
-    (ctx: CanvasRenderingContext2D, deltaTime: number) => {
-      const { width, height } = OFFICE;
-      const rm = roomManagerRef.current;
-      const allAgents = agentsRef.current;
-      const appearance = settingsRef.current;
-      const spriteScale = appearance.pixelScale;
-
-      ctx.clearRect(0, 0, width, height);
-
-      // Update all agents (current room uses pathfinding, off-screen rooms just decrement timers)
-      const currentTilemap = rm.getCurrentTilemap();
-      for (const agent of allAgents) {
-        const agentRoom = rm.agentRooms[agent.id] || "main-office";
-        if (agentRoom === rm.currentRoomId) {
-          updateAgent(agent, deltaTime, currentTilemap);
-        } else {
-          // Off-screen: just tick behavior timer
-          agent.behaviorTimer -= deltaTime;
-          if (agent.behaviorTimer <= 0) {
-            agent.behaviorTimer = 5 + Math.random() * 10;
-          }
-        }
-      }
-
-      // Draw current room
-      const tilemap = rm.getCurrentTilemap();
-
-      // Pass 1: floor, walls, rugs
-      drawTileFloor(ctx, tilemap);
-
-      // Pass 2: furniture behind agents
-      drawFurnitureBack(ctx, tilemap);
-
-      // Pass 3+4: agents and front-furniture Y-interleaved
-      // Agents sitting at their desk occupy the chair visually, so we skip
-      // drawing the furniture chair sprite for occupied seats to avoid
-      // double-drawing. For unoccupied chairs and walking agents, Y-sort
-      // determines correct layering.
-      const visibleAgents = rm.getCurrentAgents(allAgents);
-      const edit = editModeRef.current;
-
-      // Build set of chair tiles occupied by sitting agents
-      const occupiedChairs = new Set<string>();
-      for (const agent of visibleAgents) {
-        const isSeated =
-          agent.behavior === "working" ||
-          agent.behavior === "sitting-idle";
-        if (isSeated && agent.state !== "walking") {
-          occupiedChairs.add(`${agent.tileCol},${agent.tileRow}`);
-        }
-      }
-
-      type Drawable =
-        | { kind: "agent"; agent: AgentEntity; y: number }
-        | { kind: "chair"; col: number; row: number; y: number };
-
-      const drawables: Drawable[] = visibleAgents.map((agent) => ({
-        kind: "agent" as const,
-        agent,
-        y: agent.y,
-      }));
-
-      // Add unoccupied chair tiles as drawables
-      const ts = OFFICE.tileSize;
-      for (let row = 0; row < tilemap.rows; row++) {
-        for (let col = 0; col < tilemap.cols; col++) {
-          if (tilemap.getTile(col, row) === TileType.Chair) {
-            if (!occupiedChairs.has(`${col},${row}`)) {
-              drawables.push({
-                kind: "chair",
-                col,
-                row,
-                y: row * ts,
-              });
-            }
-          }
-        }
-      }
-
-      drawables.sort((a, b) => a.y - b.y);
-      drawables.forEach((d) => {
-        if (d.kind === "agent") {
-          if (edit.active && edit.draggedAgentId === d.agent.id && edit.mousePixel) {
-            return;
-          }
-          drawAgent(ctx, d.agent, spriteScale);
-        } else {
-          const chairCanvas = getFurnitureCanvas("chair");
-          ctx.drawImage(chairCanvas, d.col * ts, d.row * ts, ts, ts);
-        }
-      });
-
-      // Pass 5: overlays (hover highlight) — gated by ambientLighting setting
-      if (hoveredRef.current && !edit.active && appearance.ambientLighting) {
-        const agent = visibleAgents.find(
-          (a) => a.id === hoveredRef.current
-        );
-        if (agent) {
-          const w = 16 * spriteScale;
-          const h = 24 * spriteScale;
-          ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
-          ctx.lineWidth = 2;
-          ctx.setLineDash([4, 4]);
-          ctx.strokeRect(agent.x - 4, agent.y - 4, w + 8, h + 8);
-          ctx.setLineDash([]);
-        }
-      }
-
-      // Pass 6: edit mode overlays
-      drawEditModeOverlays(ctx, deltaTime);
-
-      // Draw dragged agent at mouse position
-      if (edit.active && edit.draggedAgentId && edit.mousePixel) {
-        const draggedAgent = visibleAgents.find(
-          (a) => a.id === edit.draggedAgentId
-        );
-        if (draggedAgent) {
-          const sw = 16 * spriteScale;
-          const sh = 24 * spriteScale;
-          ctx.save();
-          ctx.globalAlpha = 0.7;
-          // Temporarily set agent position for drawing
-          const origX = draggedAgent.x;
-          const origY = draggedAgent.y;
-          draggedAgent.x = edit.mousePixel.x - sw / 2;
-          draggedAgent.y = edit.mousePixel.y - sh / 2;
-          drawAgent(ctx, draggedAgent, spriteScale);
-          draggedAgent.x = origX;
-          draggedAgent.y = origY;
-          ctx.globalAlpha = 1;
-          ctx.restore();
-        }
-      }
-
-      // Pass 7: edit button
-      drawEditButton(ctx);
-    },
-    [drawEditModeOverlays, drawEditButton]
-  );
+  // ── PIXI SCENE LIFECYCLE ────────────────────────────
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const div = containerRef.current;
+    if (!div) return;
 
-    ctx.imageSmoothingEnabled = false;
-    lastTimeRef.current = performance.now();
+    let destroyed = false;
 
-    let animationId: number;
-    const animate = () => {
-      const now = performance.now();
-      const deltaTime = (now - lastTimeRef.current) / 1000;
-      lastTimeRef.current = now;
+    async function init() {
+      const scene = await createScene(div!, OFFICE.width, OFFICE.height);
+      if (destroyed) {
+        destroyScene(scene);
+        return;
+      }
+      sceneRef.current = scene;
 
-      draw(ctx, deltaTime);
-      animationId = requestAnimationFrame(animate);
+      const rm = roomManagerRef.current;
+      const tilemap = rm.getCurrentTilemap();
+
+      // Build static layers
+      buildFloorLayer(scene.floorLayer, tilemap);
+      chairSpritesRef.current = buildFurnitureLayer(scene.furnitureLayer, tilemap);
+
+      // Create agent displays
+      const spriteScale = settingsRef.current.pixelScale;
+      const visibleAgents = rm.getCurrentAgents(agentsRef.current);
+      for (const agent of visibleAgents) {
+        const display = createAgentDisplay(agent, spriteScale);
+        scene.entityLayer.addChild(display.container);
+        scene.labelLayer.addChild(display.labelContainer);
+        agentDisplaysRef.current.set(agent.id, display);
+      }
+
+      // Create UI elements
+      const editBtn = createEditButton();
+      scene.uiLayer.addChild(editBtn);
+      editButtonRef.current = editBtn;
+
+      const editOverlay = createEditModeOverlay();
+      scene.overlayLayer.addChild(editOverlay);
+      editOverlayRef.current = editOverlay;
+
+      const hoverGfx = new Graphics();
+      scene.overlayLayer.addChild(hoverGfx);
+      hoverGraphicsRef.current = hoverGfx;
+
+      // Create effects layer
+      const effects = createEffects(scene.effectsLayer);
+      rebuildStaticEffects(effects, tilemap);
+      effectsRef.current = effects;
+
+      // Create room name banner
+      const bannerBg = new Graphics();
+      const bannerStyle = new TextStyle({
+        fontFamily: "monospace",
+        fontWeight: "bold",
+        fontSize: 14,
+        fill: "#ffffff",
+      });
+      const bannerText = new Text({ text: "", style: bannerStyle });
+      bannerText.anchor.set(0.5, 0.5);
+      bannerBg.visible = false;
+      bannerText.visible = false;
+      scene.uiLayer.addChild(bannerBg, bannerText);
+      roomBannerRef.current = { bg: bannerBg, text: bannerText, fadeTimer: 0 };
+
+      // Create room tab bar
+      const tabBar = createRoomTabBar(scene.uiLayer);
+      roomTabBarRef.current = tabBar;
+
+      // Start game loop
+      lastTimeRef.current = performance.now();
+      scene.app.ticker.add(gameLoop);
+    }
+
+    init();
+
+    const displays = agentDisplaysRef.current;
+
+    return () => {
+      destroyed = true;
+      const scene = sceneRef.current;
+      if (scene) {
+        scene.app.ticker.remove(gameLoop);
+        // Clean up agent displays
+        for (const display of displays.values()) {
+          destroyAgentDisplay(display);
+        }
+        displays.clear();
+        destroyScene(scene);
+        sceneRef.current = null;
+        dragSpriteRef.current = null;
+        // Flush module-level texture caches so remounts start fresh
+        clearAllSpriteTextures();
+        clearAllFurnitureTextures();
+        clearAllTileTextures();
+      }
     };
-    animationId = requestAnimationFrame(animate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    return () => cancelAnimationFrame(animationId);
-  }, [draw]);
+  // ── GAME LOOP ────────────────────────────────────────
+
+  const gameLoop = useCallback(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const now = performance.now();
+    const deltaTime = (now - lastTimeRef.current) / 1000;
+    lastTimeRef.current = now;
+
+    const rm = roomManagerRef.current;
+    const allAgents = agentsRef.current;
+    const appearance = settingsRef.current;
+    const spriteScale = appearance.pixelScale;
+    const edit = editModeRef.current;
+
+    // Handle room transition alpha
+    const prevRoomId = rm.currentRoomId;
+    const transitioning = rm.updateTransition(deltaTime);
+
+    // Rebuild layers when room actually switches (at midpoint or end)
+    if (rm.currentRoomId !== prevRoomId) {
+      rebuildRoom();
+    }
+
+    if (transitioning) {
+      scene.app.stage.alpha = rm.getTransitionAlpha();
+
+      // Show room name banner
+      const banner = roomBannerRef.current;
+      if (banner) {
+        const targetName = rm.getTransitionTargetName();
+        if (targetName) {
+          banner.text.text = targetName;
+          banner.text.visible = true;
+          banner.bg.visible = true;
+          banner.fadeTimer = 0.8; // show for 0.8s after transition ends
+
+          // Position at center-top
+          const bx = OFFICE.width / 2;
+          const by = 30;
+          banner.text.x = bx;
+          banner.text.y = by;
+
+          // Background
+          const tw = banner.text.width + 20;
+          const th = 24;
+          banner.bg.clear();
+          banner.bg.roundRect(bx - tw / 2, by - th / 2, tw, th, 6);
+          banner.bg.fill({ color: 0x1a1a1a, alpha: 0.8 });
+
+          // Alpha tied to transition
+          const alpha = 1 - rm.getTransitionAlpha(); // visible when scene fades
+          banner.bg.alpha = alpha;
+          banner.text.alpha = alpha;
+        }
+      }
+    } else {
+      scene.app.stage.alpha = 1;
+
+      // Fade out banner after transition
+      const banner = roomBannerRef.current;
+      if (banner && banner.fadeTimer > 0) {
+        banner.fadeTimer -= deltaTime;
+        const alpha = Math.max(0, banner.fadeTimer / 0.8);
+        banner.bg.alpha = alpha;
+        banner.text.alpha = alpha;
+        if (banner.fadeTimer <= 0) {
+          banner.bg.visible = false;
+          banner.text.visible = false;
+        }
+      }
+    }
+
+    // Update all agents
+    const currentTilemap = rm.getCurrentTilemap();
+    for (const agent of allAgents) {
+      const agentRoom = rm.agentRooms[agent.id] || "main-office";
+      if (agentRoom === rm.currentRoomId) {
+        updateAgent(agent, deltaTime, currentTilemap);
+      } else {
+        agent.behaviorTimer -= deltaTime;
+        if (agent.behaviorTimer <= 0) {
+          agent.behaviorTimer = 5 + Math.random() * 10;
+        }
+      }
+    }
+
+    // Sync display objects with visible agents
+    const visibleAgents = rm.getCurrentAgents(allAgents);
+    const visibleIds = new Set(visibleAgents.map((a) => a.id));
+
+    // Add displays for new agents
+    for (const agent of visibleAgents) {
+      if (!agentDisplaysRef.current.has(agent.id)) {
+        const display = createAgentDisplay(agent, spriteScale);
+        scene.entityLayer.addChild(display.container);
+        scene.labelLayer.addChild(display.labelContainer);
+        agentDisplaysRef.current.set(agent.id, display);
+      }
+    }
+
+    // Remove displays for agents no longer visible
+    for (const [id, display] of agentDisplaysRef.current) {
+      if (!visibleIds.has(id)) {
+        destroyAgentDisplay(display);
+        agentDisplaysRef.current.delete(id);
+      }
+    }
+
+    // Build set of occupied chairs (seated agents)
+    const occupiedChairs = new Set<string>();
+    for (const agent of visibleAgents) {
+      const isSeated =
+        agent.behavior === "working" || agent.behavior === "sitting-idle";
+      if (isSeated && agent.state !== "walking") {
+        occupiedChairs.add(`${agent.tileCol},${agent.tileRow}`);
+      }
+    }
+
+    // Show/hide chair sprites based on occupancy
+    for (const chair of chairSpritesRef.current) {
+      chair.sprite.visible = !occupiedChairs.has(`${chair.col},${chair.row}`);
+    }
+
+    // Update agent displays
+    for (const agent of visibleAgents) {
+      const display = agentDisplaysRef.current.get(agent.id);
+      if (!display) continue;
+
+      // Hide dragged agent at its original position
+      if (edit.active && edit.draggedAgentId === agent.id && edit.mousePixel) {
+        display.container.visible = false;
+        display.labelContainer.visible = false;
+        continue;
+      }
+
+      display.container.visible = true;
+      display.labelContainer.visible = true;
+      updateAgentDisplay(display, agent, spriteScale);
+    }
+
+    // Y-sort the entity layer
+    scene.entityLayer.sortChildren();
+
+    // Hover overlay
+    if (hoveredRef.current && !edit.active && appearance.ambientLighting) {
+      const agent = visibleAgents.find((a) => a.id === hoveredRef.current);
+      if (hoverGraphicsRef.current) {
+        updateHoverOverlay(hoverGraphicsRef.current, agent ?? null, spriteScale);
+      }
+    } else if (hoverGraphicsRef.current) {
+      hoverGraphicsRef.current.clear();
+    }
+
+    // Effects layer update
+    if (effectsRef.current && appearance.ambientLighting) {
+      const hoveredAgent = hoveredRef.current
+        ? visibleAgents.find((a) => a.id === hoveredRef.current) ?? null
+        : null;
+      updateEffects(effectsRef.current, deltaTime, currentTilemap, hoveredAgent, spriteScale);
+      scene.effectsLayer.visible = true;
+    } else if (scene.effectsLayer) {
+      scene.effectsLayer.visible = false;
+    }
+
+    // Edit mode overlays
+    pulseRef.current += deltaTime * 3;
+    const pulse = 0.3 + Math.sin(pulseRef.current) * 0.2;
+
+    if (editOverlayRef.current) {
+      updateEditModeOverlays(
+        editOverlayRef.current,
+        edit,
+        rm.getCurrentRoom(),
+        pulse
+      );
+    }
+
+    // Edit button
+    if (editButtonRef.current) {
+      updateEditButton(editButtonRef.current, edit.active);
+    }
+
+    // Room tab bar
+    if (roomTabBarRef.current) {
+      roomTabBarRef.current.update(rm.currentRoomId);
+    }
+
+    // Drag preview
+    updateDragPreview(edit, visibleAgents, spriteScale, scene);
+  }, []);
+
+  function updateDragPreview(
+    edit: EditModeState,
+    visibleAgents: AgentEntity[],
+    spriteScale: number,
+    scene: PixelOfficeScene
+  ) {
+    if (edit.active && edit.draggedAgentId && edit.mousePixel) {
+      const draggedAgent = visibleAgents.find(
+        (a) => a.id === edit.draggedAgentId
+      );
+      if (draggedAgent) {
+        if (!dragSpriteRef.current) {
+          dragSpriteRef.current = new Sprite();
+          dragSpriteRef.current.alpha = 0.7;
+          scene.overlayLayer.addChild(dragSpriteRef.current);
+        }
+
+        // Get the sprite texture for the dragged agent
+        const sprites = getCharacterSprites(draggedAgent.paletteId);
+        const spriteData: SpriteData = sprites.idle;
+        const texture = getSpriteTexture(spriteData, `${draggedAgent.paletteId}-idle-s${spriteScale}`, spriteScale);
+        dragSpriteRef.current.texture = texture;
+
+        const sw = 16 * spriteScale;
+        const sh = 24 * spriteScale;
+        dragSpriteRef.current.x = edit.mousePixel.x - sw / 2;
+        dragSpriteRef.current.y = edit.mousePixel.y - sh / 2;
+        dragSpriteRef.current.visible = true;
+      }
+    } else {
+      if (dragSpriteRef.current) {
+        dragSpriteRef.current.visible = false;
+      }
+    }
+  }
+
+  function rebuildRoom() {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const rm = roomManagerRef.current;
+    const tilemap = rm.getCurrentTilemap();
+
+    buildFloorLayer(scene.floorLayer, tilemap);
+    chairSpritesRef.current = buildFurnitureLayer(scene.furnitureLayer, tilemap);
+
+    // Rebuild static effects for new room
+    if (effectsRef.current) {
+      rebuildStaticEffects(effectsRef.current, tilemap);
+    }
+
+    // Remove old agent displays and recreate
+    for (const display of agentDisplaysRef.current.values()) {
+      destroyAgentDisplay(display);
+    }
+    agentDisplaysRef.current.clear();
+
+    const spriteScale = settingsRef.current.pixelScale;
+    const visibleAgents = rm.getCurrentAgents(agentsRef.current);
+    for (const agent of visibleAgents) {
+      const display = createAgentDisplay(agent, spriteScale);
+      scene.entityLayer.addChild(display.container);
+      scene.labelLayer.addChild(display.labelContainer);
+      agentDisplaysRef.current.set(agent.id, display);
+    }
+  }
+
+  // ── EVENT HANDLERS ──────────────────────────────────
 
   const getCanvasCoords = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const scene = sceneRef.current;
+      if (!scene) return null;
+      const canvas = scene.app.canvas as HTMLCanvasElement;
       const rect = canvas.getBoundingClientRect();
       return {
         x: (e.clientX - rect.left) * (OFFICE.width / rect.width),
@@ -412,7 +508,7 @@ export default function PixelOfficeCanvas({
   );
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+    (e: React.MouseEvent<HTMLDivElement>) => {
       const edit = editModeRef.current;
       if (!edit.active) return;
 
@@ -423,17 +519,13 @@ export default function PixelOfficeCanvas({
       const visibleAgents = rm.getCurrentAgents(agentsRef.current);
       const roomDef = rm.getCurrentRoom();
 
-      // Check if clicking on an agent during edit mode
       for (const agent of visibleAgents) {
         if (
           isAgentHovered(agent, coords.x, coords.y, settingsRef.current.pixelScale)
         ) {
-          // Start drag
           const available = getAvailableDesks(
             roomDef,
-            roomDef.deskAssignments.filter(
-              (d) => d.agentId !== agent.id
-            )
+            roomDef.deskAssignments.filter((d) => d.agentId !== agent.id)
           );
           edit.draggedAgentId = agent.id;
           edit.dragStartTile = {
@@ -451,13 +543,12 @@ export default function PixelOfficeCanvas({
   );
 
   const handleMouseUp = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+    (e: React.MouseEvent<HTMLDivElement>) => {
       const edit = editModeRef.current;
       if (!edit.active || !edit.draggedAgentId) return;
 
       const coords = getCanvasCoords(e);
       if (!coords) {
-        // Cancel drag
         edit.draggedAgentId = undefined;
         edit.dragStartTile = undefined;
         edit.mousePixel = undefined;
@@ -483,24 +574,20 @@ export default function PixelOfficeCanvas({
         );
 
         if (agent) {
-          // Find the desk that owns this chair
           const layout = roomDef.layout;
           let deskCol = tileCol;
           const deskRow = tileRow - 1;
 
-          // Check if there's a desk above this chair
           if (
             deskRow >= 0 &&
             (layout[deskRow][tileCol] === TileType.DeskLeft ||
               layout[deskRow][tileCol] === TileType.DeskRight)
           ) {
-            // Use the left side of the desk pair
             if (layout[deskRow][tileCol] === TileType.DeskRight && tileCol > 0) {
               deskCol = tileCol - 1;
             }
           }
 
-          // Update agent position
           tilemap.setOccupied(agent.tileCol, agent.tileRow, false);
           agent.tileCol = tileCol;
           agent.tileRow = tileRow;
@@ -513,7 +600,6 @@ export default function PixelOfficeCanvas({
           agent.behavior = "working";
           tilemap.setOccupied(tileCol, tileRow, true);
 
-          // Save to office config
           const config = loadOfficeConfig();
           config.deskAssignments[agent.id] = {
             deskCol,
@@ -525,7 +611,6 @@ export default function PixelOfficeCanvas({
         }
       }
 
-      // Reset drag state
       edit.draggedAgentId = undefined;
       edit.dragStartTile = undefined;
       edit.mousePixel = undefined;
@@ -536,11 +621,20 @@ export default function PixelOfficeCanvas({
   );
 
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+    (e: React.MouseEvent<HTMLDivElement>) => {
       const coords = getCanvasCoords(e);
       if (!coords) return;
       const rm = roomManagerRef.current;
       const edit = editModeRef.current;
+
+      // Check room tab bar click
+      if (roomTabBarRef.current && !rm.isTransitioning()) {
+        const tabRoom = roomTabBarRef.current.hitTest(coords.x, coords.y);
+        if (tabRoom) {
+          rm.switchRoom(tabRoom);
+          return;
+        }
+      }
 
       // Check edit button click
       if (
@@ -560,12 +654,9 @@ export default function PixelOfficeCanvas({
         return;
       }
 
-      // If in edit mode and dragging, don't process clicks
       if (edit.active && edit.draggedAgentId) return;
 
-      // If in edit mode, don't process normal clicks (agent clicks handled by mouseDown/mouseUp)
       if (edit.active) {
-        // Check if clicking on an agent to open customizer
         const visibleAgents = rm.getCurrentAgents(agentsRef.current);
         for (const agent of visibleAgents) {
           if (
@@ -579,7 +670,18 @@ export default function PixelOfficeCanvas({
         return;
       }
 
-      // Check agent clicks — show "Customize" via normal agent click handler
+      // Check door click
+      if (!rm.isTransitioning()) {
+        const ts = OFFICE.tileSize;
+        const tileCol = Math.floor(coords.x / ts);
+        const tileRow = Math.floor(coords.y / ts);
+        const door = rm.getDoorAt(tileCol, tileRow);
+        if (door) {
+          rm.switchRoom(door.targetRoom);
+          return;
+        }
+      }
+
       const visibleAgents = rm.getCurrentAgents(agentsRef.current);
       for (const agent of visibleAgents) {
         if (
@@ -596,23 +698,35 @@ export default function PixelOfficeCanvas({
   );
 
   const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const scene = sceneRef.current;
+      if (!scene) return;
       const coords = getCanvasCoords(e);
       if (!coords) return;
 
+      const canvas = scene.app.canvas as HTMLCanvasElement;
       const rm = roomManagerRef.current;
       const edit = editModeRef.current;
 
-      // Update drag position
       if (edit.active && edit.draggedAgentId) {
         edit.mousePixel = { x: coords.x, y: coords.y };
         canvas.style.cursor = "grabbing";
         return;
       }
 
-      // Check if over edit button
+      // Room tab hover
+      if (roomTabBarRef.current) {
+        const tabRoom = roomTabBarRef.current.hitTest(coords.x, coords.y);
+        if (tabRoom) {
+          canvas.style.cursor = "pointer";
+          if (hoveredRef.current !== null) {
+            hoveredRef.current = null;
+            forceRender((n) => n + 1);
+          }
+          return;
+        }
+      }
+
       if (
         coords.x >= EDIT_BTN_X &&
         coords.x <= EDIT_BTN_X + EDIT_BTN_W &&
@@ -627,7 +741,6 @@ export default function PixelOfficeCanvas({
         return;
       }
 
-      // Check agent hover
       const visibleAgents = rm.getCurrentAgents(agentsRef.current);
       let found = false;
       for (const agent of visibleAgents) {
@@ -643,42 +756,88 @@ export default function PixelOfficeCanvas({
           break;
         }
       }
-      if (!found && hoveredRef.current !== null) {
-        hoveredRef.current = null;
+      if (!found) {
+        // Check door hover
+        if (!edit.active) {
+          const ts = OFFICE.tileSize;
+          const tileCol = Math.floor(coords.x / ts);
+          const tileRow = Math.floor(coords.y / ts);
+          const door = rm.getDoorAt(tileCol, tileRow);
+          if (door) {
+            canvas.style.cursor = "pointer";
+            if (hoveredRef.current !== null) {
+              hoveredRef.current = null;
+              forceRender((n) => n + 1);
+            }
+            return;
+          }
+        }
+
+        if (hoveredRef.current !== null) {
+          hoveredRef.current = null;
+          forceRender((n) => n + 1);
+        }
         canvas.style.cursor = "default";
-        forceRender((n) => n + 1);
       }
     },
     [getCanvasCoords]
   );
 
+  const handleMouseLeave = useCallback(() => {
+    hoveredRef.current = null;
+    const edit = editModeRef.current;
+    if (edit.draggedAgentId) {
+      edit.draggedAgentId = undefined;
+      edit.dragStartTile = undefined;
+      edit.mousePixel = undefined;
+      edit.validDropTargets = [];
+    }
+    forceRender((n) => n + 1);
+  }, []);
+
+  // ── RESIZE ────────────────────────────────────────
+
+  useEffect(() => {
+    const update = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      const cw = el.clientWidth;
+      const ch = el.clientHeight;
+      const scale = Math.max(
+        1,
+        Math.min(
+          Math.floor(cw / OFFICE.width),
+          Math.floor(ch / OFFICE.height)
+        )
+      );
+      const w = OFFICE.width * scale;
+      const h = OFFICE.height * scale;
+
+      const scene = sceneRef.current;
+      if (scene) {
+        const canvas = scene.app.canvas as HTMLCanvasElement;
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="relative w-full h-full min-h-[calc(100vh-4rem)]">
-      <canvas
-        ref={canvasRef}
-        width={OFFICE.width}
-        height={OFFICE.height}
-        onClick={handleClick}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => {
-          hoveredRef.current = null;
-          const edit = editModeRef.current;
-          if (edit.draggedAgentId) {
-            edit.draggedAgentId = undefined;
-            edit.dragStartTile = undefined;
-            edit.mousePixel = undefined;
-            edit.validDropTargets = [];
-          }
-          forceRender((n) => n + 1);
-        }}
-        className="w-full h-full object-cover"
-        style={{
-          imageRendering: "pixelated",
-          background: "#d4c9a8",
-        }}
-      />
+    <div
+      ref={containerRef}
+      className="relative w-full h-full min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden"
+      style={{ background: "#2a2a2a" }}
+      onClick={handleClick}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* PixiJS canvas is appended here by createScene */}
       {creatorAgentId && (
         <CharacterCreator
           agentId={creatorAgentId}

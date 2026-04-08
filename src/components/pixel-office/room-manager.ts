@@ -114,12 +114,18 @@ export class RoomManager {
 
   getTransitionAlpha(): number {
     if (!this.transition?.active) return 1;
-    const p = this.transition.progress;
-    // Fade out for first half, fade in for second half
-    if (p < 0.5) {
-      return 1 - p * 2; // 1 -> 0
-    }
-    return (p - 0.5) * 2; // 0 -> 1
+    const t = this.transition.progress;
+    // Cosine ease-in-out: smooth slow-start, fast-middle, slow-end
+    return (Math.cos(Math.PI * t) + 1) / 2;
+  }
+
+  getTransitionTargetName(): string | null {
+    if (!this.transition?.active) return null;
+    return getRoomDefinition(this.transition.to).name;
+  }
+
+  isTransitioning(): boolean {
+    return this.transition?.active ?? false;
   }
 
   getDoorAt(col: number, row: number): { targetRoom: RoomId; entryCol: number; entryRow: number } | null {

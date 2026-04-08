@@ -178,8 +178,9 @@ All routes under `/api/gateway/`. Response format: `{ data, source: "live" | "mo
 - **Mock mode**: returns generic demo data from `src/lib/mock-data.ts` (single "Demo Agent"). Only shown when OpenClaw is not installed — never when installed but empty.
 - **Dynamic agent discovery**: `agent-builder.ts` scans `~/.openclaw/agents/` subdirectories, reads identity/soul/tools per agent, generates deterministic colors
 - **Configurable**: `OPENCLAW_DIR` env var for non-standard install paths, `GATEWAY_PORT` for port override
-- **Auth**: `GUILD_API_TOKEN` env var — when set, all `/api/gateway/*` requests require `Authorization: Bearer <token>` header or `guild_token` cookie (for SSE). When unset, auth is skipped (backwards compatible).
+- **Auth**: `GUILD_API_TOKEN` env var — when set, all `/api/gateway/*` requests require `Authorization: Bearer <token>` header or `guild_token` cookie (for SSE). When unset, auth is skipped (backwards compatible). `--tunnel` auto-generates token if unset.
 - **Auth middleware**: `src/proxy.ts` (Next.js 16 proxy, not middleware.ts) — checks header then cookie fallback
+- **Magic link auth**: `/api/auth/link` GET endpoint — validates token (constant-time comparison), rate-limited (5/min per IP), sets cookie, redirects to `/guild`. Used by QR code in `--tunnel` mode.
 - **WebSocket proxy**: dispatch and actions use server-side WS to gateway (auth token stays server-side)
 - **SSE streaming**: `/api/gateway/sessions/[id]/stream` for real-time session events (used by Chat and Guild pages)
 - **Polling**: client hooks use `setInterval` (3s-60s depending on feature urgency)
@@ -187,7 +188,7 @@ All routes under `/api/gateway/`. Response format: `{ data, source: "live" | "mo
 ## CLI & Distribution
 
 - **CLI entry point**: `bin/cli.mjs` — `npx @owshstudio/the-guild` or `node bin/cli.mjs`
-- **Flags**: `--port <number>`, `--lan` (bind 0.0.0.0), `--dev` (Turbopack dev mode)
+- **Flags**: `--port <number>`, `--lan` (bind 0.0.0.0), `--tunnel` (Cloudflare Quick Tunnel + QR auth), `--dev` (Turbopack dev mode)
 - **Production mode**: `process.chdir()` into `.next/standalone/` before importing `server.js`
 - **Dev mode**: spawns `npx next dev` with `env: process.env` for custom env var passthrough
 - **Docker**: `Dockerfile` (multi-stage build) + `docker-compose.yml` with `~/.openclaw` volume mount
@@ -247,7 +248,7 @@ src/
     chains/page.tsx                     # Task chain builder
     settings/page.tsx                   # Settings + auth token + network info
     api/gateway/                        # 24 API routes (18 feature endpoints + 6 action routes)
-    api/auth/                           # Login endpoint (sets guild_token cookie)
+    api/auth/                           # Auth endpoints (login + magic link for tunnel QR)
   components/
     sidebar.tsx                         # 13-item navigation sidebar
     gateway-banner.tsx                  # Gateway status banner
@@ -320,4 +321,4 @@ src/
 - **v0.2 (Phases 4-5)**: Toast system, sessions, dispatch, cron, webhooks, multi-room office, character creator, teams, comms, HITL, budget, chains
 - **v0.3 (Make It Real)**: Dynamic N-agent discovery, removed all hardcoded NYX/HEMERA references, env configuration (`OPENCLAW_DIR`, `GATEWAY_PORT`), mock/live detection, README + `.env.example`, generic demo data fallback
 - **v0.4 (Chat + Mobile)**: Chat page with SSE streaming, agent pill bar, session resume drawer, inline markdown rendering (bold/italic/code/links), mobile-responsive layout, kanban task board, guild page wiring
-- **v0.5 (Ship-Ready)**: CLI distribution (`bin/cli.mjs` with `--port`, `--lan`, `--dev`), Docker support, API auth (`GUILD_API_TOKEN` + `proxy.ts`), `.npmignore` for npm publish, EventSource leak fixes (chat agent switch + guild page unmount), session load error handling, `isLoadingSession` state, accessibility (aria-labels, viewBox fix), `scrollbar-none` CSS utility, mobile height fix (56px top bar), sessions page flex fix, message bubble polish (empty message filtering, markdown rendering), version bump to 0.5.0
+- **v0.5 (Ship-Ready)**: CLI distribution (`bin/cli.mjs` with `--port`, `--lan`, `--dev`, `--tunnel`), Docker support, API auth (`GUILD_API_TOKEN` + `proxy.ts`), `--tunnel` flag (Cloudflare Quick Tunnel + QR code with magic auth link for phone access), `/api/auth/link` endpoint (constant-time token validation, rate limiting, cookie + redirect), `.npmignore` for npm publish, EventSource leak fixes (chat agent switch + guild page unmount), session load error handling, `isLoadingSession` state, accessibility (aria-labels, viewBox fix), `scrollbar-none` CSS utility, mobile height fix (56px top bar), sessions page flex fix, message bubble polish (empty message filtering, markdown rendering), version bump to 0.5.0

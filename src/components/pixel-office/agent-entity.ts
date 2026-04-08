@@ -41,6 +41,14 @@ export interface AgentEntity {
   behaviorTimer: number; // seconds until next behavior change
   // Room
   currentRoom: RoomId;
+  // Blink
+  blinkTimer: number;
+  blinkActive: boolean;
+  blinkDuration: number;
+  // Bubbles
+  bubbleType: "speech" | "thought" | null;
+  bubbleText: string;
+  bubbleTimer: number;
 }
 
 function randomRange(min: number, max: number): number {
@@ -89,6 +97,12 @@ export function createAgentEntities(
         behavior: "sitting-idle" as BehaviorState,
         behaviorTimer: randomRange(5, 12),
         currentRoom: "main-office" as RoomId,
+        blinkTimer: 3 + Math.random() * 5,
+        blinkActive: false,
+        blinkDuration: 0,
+        bubbleType: null,
+        bubbleText: "",
+        bubbleTimer: 0,
       };
     });
   }
@@ -125,6 +139,12 @@ export function createAgentEntities(
       behavior: agent.status === "active" ? "working" : "sitting-idle",
       behaviorTimer: randomRange(5, 12),
       currentRoom: "main-office" as RoomId,
+      blinkTimer: 3 + Math.random() * 5,
+      blinkActive: false,
+      blinkDuration: 0,
+      bubbleType: null,
+      bubbleText: "",
+      bubbleTimer: 0,
     };
   });
 }
@@ -205,9 +225,18 @@ export function pickBehavior(agent: AgentEntity, tilemap: TileMap): void {
         agent.state = "typing";
       }
       agent.behaviorTimer = randomRange(8, 15);
+      // 30% chance show thought bubble
+      if (Math.random() < 0.3) {
+        agent.bubbleType = "thought";
+        agent.bubbleText = "...";
+        agent.bubbleTimer = 2;
+      }
     } else if (roll < 0.9) {
       // Getting coffee
       agent.behavior = "getting-coffee";
+      agent.bubbleType = "speech";
+      agent.bubbleText = "☕";
+      agent.bubbleTimer = 1.5;
       tryMoveTo(agent, tilemap, COFFEE_MACHINE.col, COFFEE_MACHINE.row, true);
       agent.behaviorTimer = randomRange(3, 5);
     } else {
@@ -272,10 +301,10 @@ export function updateAgent(
 
     agent.moveProgress += agent.moveSpeed * deltaTime;
 
-    // Interpolate pixel position
+    // Interpolate pixel position (round to integers for crisp pixel art)
     const t = Math.min(agent.moveProgress, 1);
-    agent.x = currentPixel.x + (targetPixel.x - currentPixel.x) * t;
-    agent.y = currentPixel.y + (targetPixel.y - currentPixel.y) * t;
+    agent.x = Math.round(currentPixel.x + (targetPixel.x - currentPixel.x) * t);
+    agent.y = Math.round(currentPixel.y + (targetPixel.y - currentPixel.y) * t);
 
     // Update facing
     agent.facing = facingFromDirection(
@@ -316,6 +345,10 @@ export function updateAgent(
           // Stand at coffee machine, then go back to desk
           agent.state = "idle";
           agent.facing = "up";
+          // Show coffee bubble on arrival
+          agent.bubbleType = "speech";
+          agent.bubbleText = "☕";
+          agent.bubbleTimer = 1;
           // Timer will trigger return to desk
         } else {
           agent.state = "idle";
@@ -334,6 +367,12 @@ export function updateAgent(
           tryMoveTo(agent, tilemap, desk.chairCol, desk.chairRow);
           agent.behavior = "working";
           agent.behaviorTimer = randomRange(8, 15);
+          // 20% chance lightbulb on return
+          if (Math.random() < 0.2) {
+            agent.bubbleType = "thought";
+            agent.bubbleText = "💡";
+            agent.bubbleTimer = 1.5;
+          }
           return;
         }
       }
@@ -348,7 +387,37 @@ export function updateAgent(
         agent.frameTimer = 0;
       }
     } else if (agent.state === "idle") {
-      agent.frame = 0;
+      // Idle breathing animation — slow cycle
+      agent.frameTimer += deltaTime;
+      if (agent.frameTimer >= 1.2) {
+        agent.frame = agent.frame === 0 ? 1 : 0;
+        agent.frameTimer = 0;
+      }
+    }
+
+    // Blink timer — only when not walking
+    if (agent.blinkActive) {
+      agent.blinkDuration -= deltaTime;
+      if (agent.blinkDuration <= 0) {
+        agent.blinkActive = false;
+        agent.blinkTimer = 3 + Math.random() * 5;
+      }
+    } else {
+      agent.blinkTimer -= deltaTime;
+      if (agent.blinkTimer <= 0) {
+        agent.blinkActive = true;
+        agent.blinkDuration = 0.12 + Math.random() * 0.06;
+      }
+    }
+
+    // Bubble timer
+    if (agent.bubbleTimer > 0) {
+      agent.bubbleTimer -= deltaTime;
+      if (agent.bubbleTimer <= 0) {
+        agent.bubbleType = null;
+        agent.bubbleText = "";
+        agent.bubbleTimer = 0;
+      }
     }
   }
 }
@@ -390,8 +459,7 @@ export function drawAgent(
         sprite = sprites.walkRight[agent.frame % 4];
         break;
       case "up":
-        // Use idle for now (no back sprite); could add walkUp later
-        sprite = sprites.idle;
+        sprite = sprites.walkUp[agent.frame % 4];
         break;
       default:
         sprite = sprites.idle;
@@ -417,7 +485,16 @@ export function drawAgent(
   // Draw character
   renderSprite(ctx, sprite, agent.x, agent.y, scale);
 
-  // Name label
+  if (isStopped) {
+    ctx.restore();
+  }
+}
+
+export function drawAgentLabel(
+  ctx: CanvasRenderingContext2D,
+  agent: AgentEntity,
+  scale: number
+): void {
   const nameX = agent.x + 8 * scale;
   const nameY = agent.y - 14;
   ctx.font = "bold 10px monospace";
@@ -461,10 +538,6 @@ export function drawAgent(
   ctx.fillText(agent.name, nameX + 2, nameY + 3);
 
   ctx.textAlign = "left";
-
-  if (isStopped) {
-    ctx.restore();
-  }
 }
 
 export function isAgentHovered(

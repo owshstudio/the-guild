@@ -2,6 +2,7 @@
 // 16 wide x 24 tall, unique templates per character
 // Reference: diverse pixel characters with volume, rich shading, color-matched outlines
 
+import { Texture } from "pixi.js";
 import { CustomPalette } from "@/lib/types";
 
 export type SpriteData = string[][];
@@ -11,11 +12,14 @@ export type HairStyle = "long" | "short" | "puffy" | "spiky";
 // Palette tokens
 const _ = "";
 const X = "X";   // outline (color-matched per character)
+const Xl = "Xl"; // outline light (top edges where light hits)
 const H = "H";   // hair mid
 const Hd = "Hd"; // hair dark
 const Hl = "Hl"; // hair highlight
 const K = "K";   // skin mid
 const Kd = "Kd"; // skin shadow
+const Km = "Km"; // mouth (darken skin 25%)
+const Kb = "Kb"; // blush (warm tint)
 const S = "S";   // shirt mid
 const Sd = "Sd"; // shirt shadow
 const Sl = "Sl"; // shirt highlight/accent
@@ -132,15 +136,28 @@ export const PALETTES: Record<string, CharPalette> = {
 };
 
 function resolve(template: string[][], palette: CharPalette): SpriteData {
+  // Compute derived tokens
+  const mouth = darken(palette.skin, 25);
+  const blushRgb = hexToRgb(palette.skin);
+  const blush = rgbToHex(
+    Math.min(255, blushRgb[0] + 15),
+    Math.max(0, blushRgb[1] - 8),
+    Math.max(0, blushRgb[2] - 5)
+  );
+  const outlineLight = lighten(palette.outline, 20);
+
   return template.map((row) =>
     row.map((cell) => {
       if (cell === _) return "";
       if (cell === X) return palette.outline;
+      if (cell === Xl) return outlineLight;
       if (cell === H) return palette.hair;
       if (cell === Hd) return palette.hairDark;
       if (cell === Hl) return palette.hairLight;
       if (cell === K) return palette.skin;
       if (cell === Kd) return palette.skinShadow;
+      if (cell === Km) return mouth;
+      if (cell === Kb) return blush;
       if (cell === S) return palette.shirt;
       if (cell === Sd) return palette.shirtShadow;
       if (cell === Sl) return palette.shirtAccent;
@@ -164,14 +181,14 @@ function flipH(template: string[][]): string[][] {
 // ═══════════════════════════════════════════════════════════
 
 const NYX_IDLE: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_],          // 0  dome tip (6 wide)
-  [_,_,_,_,X,Hl,H,Hl,Hl,H,Hl,X,_,_,_,_],     // 1  dome widens (8 wide)
-  [_,_,_,X,H,Hl,H,Hl,Hl,H,Hl,H,X,_,_,_],    // 2  hair volume (10 wide)
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0  dome tip (light outline)
+  [_,_,_,_,Xl,Hl,H,Hl,Hl,H,Hl,Xl,_,_,_,_],   // 1  dome widens (light outline)
+  [_,_,_,Xl,H,Hl,H,Hl,Hl,H,Hl,H,Xl,_,_,_],   // 2  hair volume (light outline)
   [_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_],        // 3  hair full (12 wide)
   [_,_,X,H,H,Hd,Hd,Hd,Hd,Hd,Hd,H,H,X,_,_], // 4  brow shadow
   [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],       // 5  face + hair sides
-  [_,_,X,Hd,K,E,Ep,K,K,Ep,E,K,Hd,X,_,_],     // 6  eyes
-  [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],       // 7  face
+  [_,_,X,Hd,Kb,E,Ep,K,K,Ep,E,Kb,Hd,X,_,_],   // 6  eyes + blush
+  [_,_,X,Hd,K,K,K,Km,Km,K,K,K,Hd,X,_,_],     // 7  face + mouth
   [_,_,X,H,Kd,K,K,K,K,K,K,Kd,H,X,_,_],       // 8  jaw + hair
   [_,_,X,H,H,Kd,K,K,K,K,Kd,H,H,X,_,_],       // 9  neck + hair drape
   [_,_,X,Hd,H,Sl,S,S,S,S,Sl,H,Hd,X,_,_],     // 10 V-neck collar + long hair
@@ -196,14 +213,14 @@ const NYX_IDLE: string[][] = [
 // ═══════════════════════════════════════════════════════════
 
 const HEMERA_IDLE: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_],          // 0  dome tip (same as NYX)
-  [_,_,_,X,Hl,Hl,Hl,H,H,Hl,Hl,Hl,X,_,_,_],  // 1  immediate poof (10 wide)
-  [_,_,X,H,Hl,H,Hl,H,H,Hl,H,Hl,H,X,_,_],    // 2  fluffy volume
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0  dome tip (light outline)
+  [_,_,_,Xl,Hl,Hl,Hl,H,H,Hl,Hl,Hl,Xl,_,_,_], // 1  immediate poof (light outline)
+  [_,_,Xl,H,Hl,H,Hl,H,H,Hl,H,Hl,H,Xl,_,_],   // 2  fluffy volume (light outline)
   [_,_,X,H,H,Hl,H,H,H,H,Hl,H,H,X,_,_],      // 3  hair body
   [_,_,X,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,X,_,_], // 4  bangs
   [_,_,X,H,Hd,K,K,K,K,K,K,Hd,H,X,_,_],       // 5  forehead + thick hair
-  [_,_,X,H,K,E,Ep,K,K,Ep,E,K,H,X,_,_],        // 6  eyes
-  [_,_,X,H,K,K,K,K,K,K,K,K,H,X,_,_],          // 7  face
+  [_,_,X,H,Kb,E,Ep,K,K,Ep,E,Kb,H,X,_,_],      // 6  eyes + blush
+  [_,_,X,H,K,K,K,Km,Km,K,K,K,H,X,_,_],        // 7  face + mouth
   [_,_,_,X,K,K,K,Kd,Kd,K,K,K,X,_,_,_],        // 8  lower face
   [_,_,_,X,Kd,K,K,K,K,K,K,Kd,X,_,_,_],        // 9  jaw
   [_,_,_,_,X,Kd,K,K,K,K,Kd,X,_,_,_,_],        // 10 neck
@@ -249,14 +266,14 @@ function withTypingArms(idle: string[][], arms: string[][]): string[][] {
 
 // NYX breathing: shift torso rows 12-15 down 1px (shoulders drop slightly)
 const NYX_IDLE_2: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_],          // 0
-  [_,_,_,_,X,Hl,H,Hl,Hl,H,Hl,X,_,_,_,_],     // 1
-  [_,_,_,X,H,Hl,H,Hl,Hl,H,Hl,H,X,_,_,_],    // 2
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0
+  [_,_,_,_,Xl,Hl,H,Hl,Hl,H,Hl,Xl,_,_,_,_],   // 1
+  [_,_,_,Xl,H,Hl,H,Hl,Hl,H,Hl,H,Xl,_,_,_],   // 2
   [_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_],        // 3
   [_,_,X,H,H,Hd,Hd,Hd,Hd,Hd,Hd,H,H,X,_,_], // 4
   [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],       // 5
-  [_,_,X,Hd,K,E,Ep,K,K,Ep,E,K,Hd,X,_,_],     // 6
-  [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],       // 7
+  [_,_,X,Hd,Kb,E,Ep,K,K,Ep,E,Kb,Hd,X,_,_],   // 6
+  [_,_,X,Hd,K,K,K,Km,Km,K,K,K,Hd,X,_,_],     // 7
   [_,_,X,H,Kd,K,K,K,K,K,K,Kd,H,X,_,_],       // 8
   [_,_,X,H,H,Kd,K,K,K,K,Kd,H,H,X,_,_],       // 9
   [_,_,X,Hd,H,Sl,S,S,S,S,Sl,H,Hd,X,_,_],     // 10
@@ -277,14 +294,14 @@ const NYX_IDLE_2: string[][] = [
 
 // HEMERA breathing: subtle shoulder/torso shift
 const HEMERA_IDLE_2: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_],          // 0
-  [_,_,_,X,Hl,Hl,Hl,H,H,Hl,Hl,Hl,X,_,_,_],  // 1
-  [_,_,X,H,Hl,H,Hl,H,H,Hl,H,Hl,H,X,_,_],    // 2
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0
+  [_,_,_,Xl,Hl,Hl,Hl,H,H,Hl,Hl,Hl,Xl,_,_,_], // 1
+  [_,_,Xl,H,Hl,H,Hl,H,H,Hl,H,Hl,H,Xl,_,_],   // 2
   [_,_,X,H,H,Hl,H,H,H,H,Hl,H,H,X,_,_],      // 3
   [_,_,X,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,X,_,_], // 4
   [_,_,X,H,Hd,K,K,K,K,K,K,Hd,H,X,_,_],       // 5
-  [_,_,X,H,K,E,Ep,K,K,Ep,E,K,H,X,_,_],        // 6
-  [_,_,X,H,K,K,K,K,K,K,K,K,H,X,_,_],          // 7
+  [_,_,X,H,Kb,E,Ep,K,K,Ep,E,Kb,H,X,_,_],      // 6
+  [_,_,X,H,K,K,K,Km,Km,K,K,K,H,X,_,_],        // 7
   [_,_,_,X,K,K,K,Kd,Kd,K,K,K,X,_,_,_],        // 8
   [_,_,_,X,Kd,K,K,K,K,K,K,Kd,X,_,_,_],        // 9
   [_,_,_,_,X,Kd,K,K,K,K,Kd,X,_,_,_,_],        // 10
@@ -430,14 +447,14 @@ const HEMERA_SITTING_2: string[][] = [
 // ═══════════════════════════════════════════════════════════
 
 const WALK_DOWN_L: string[][] = [
-  [_,_,_,_,X,X,X,X,X,X,X,_,_,_,_,_],
-  [_,_,_,X,H,Hl,H,H,H,H,Hl,H,X,_,_,_],
-  [_,_,X,H,H,H,H,Hl,Hl,H,H,H,H,X,_,_],
+  [_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],
+  [_,_,_,Xl,H,Hl,H,H,H,H,Hl,H,Xl,_,_,_],
+  [_,_,Xl,H,H,H,H,Hl,Hl,H,H,H,H,Xl,_,_],
   [_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_],
   [_,_,X,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,X,_,_],
   [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],
-  [_,_,X,Hd,K,E,Ep,K,K,Ep,E,K,Hd,X,_,_],
-  [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],
+  [_,_,X,Hd,Kb,E,Ep,K,K,Ep,E,Kb,Hd,X,_,_],
+  [_,_,X,Hd,K,K,K,Km,Km,K,K,K,Hd,X,_,_],
   [_,_,_,X,Kd,K,K,K,K,K,K,Kd,X,_,_,_],
   [_,_,_,_,_,X,K,K,K,K,X,_,_,_,_,_],
   [_,_,_,_,X,S,S,S,S,S,S,X,_,_,_,_],
@@ -459,14 +476,14 @@ const WALK_DOWN_L: string[][] = [
 const WALK_DOWN_R: string[][] = WALK_DOWN_L.map(row => [...row].reverse());
 
 const WALK_RIGHT_STAND: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,X,H,Hl,H,H,H,X,_,_,_,_,_],
-  [_,_,_,X,H,H,H,H,H,H,H,X,_,_,_,_],
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_,_],
+  [_,_,_,_,Xl,H,Hl,H,H,H,Xl,_,_,_,_,_],
+  [_,_,_,Xl,H,H,H,H,H,H,H,Xl,_,_,_,_],
   [_,_,_,X,H,H,H,H,H,H,H,X,_,_,_,_],
   [_,_,X,H,Hd,Hd,Hd,Hd,H,H,H,X,_,_,_,_],
   [_,_,X,H,K,K,K,K,K,H,H,X,_,_,_,_],
   [_,_,X,H,K,K,E,Ep,K,Hd,H,X,_,_,_,_],
-  [_,_,X,H,K,K,K,K,K,Hd,H,X,_,_,_,_],
+  [_,_,X,H,K,K,Km,K,K,Hd,H,X,_,_,_,_],
   [_,_,_,X,Kd,K,K,K,Kd,H,X,_,_,_,_,_],
   [_,_,_,_,_,X,K,K,X,_,_,_,_,_,_,_],
   [_,_,_,_,X,S,S,S,S,X,_,_,_,_,_,_],
@@ -486,14 +503,14 @@ const WALK_RIGHT_STAND: string[][] = [
 ];
 
 const WALK_RIGHT_STEP: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,_,_,_,_,_,_],
-  [_,_,_,_,X,H,Hl,H,H,H,X,_,_,_,_,_],
-  [_,_,_,X,H,H,H,H,H,H,H,X,_,_,_,_],
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_,_],
+  [_,_,_,_,Xl,H,Hl,H,H,H,Xl,_,_,_,_,_],
+  [_,_,_,Xl,H,H,H,H,H,H,H,Xl,_,_,_,_],
   [_,_,_,X,H,H,H,H,H,H,H,X,_,_,_,_],
   [_,_,X,H,Hd,Hd,Hd,Hd,H,H,H,X,_,_,_,_],
   [_,_,X,H,K,K,K,K,K,H,H,X,_,_,_,_],
   [_,_,X,H,K,K,E,Ep,K,Hd,H,X,_,_,_,_],
-  [_,_,X,H,K,K,K,K,K,Hd,H,X,_,_,_,_],
+  [_,_,X,H,K,K,Km,K,K,Hd,H,X,_,_,_,_],
   [_,_,_,X,Kd,K,K,K,Kd,H,X,_,_,_,_,_],
   [_,_,_,_,_,X,K,K,X,_,_,_,_,_,_,_],
   [_,_,_,_,X,S,S,S,S,X,_,_,_,_,_,_],
@@ -514,61 +531,143 @@ const WALK_RIGHT_STEP: string[][] = [
 
 
 // ═══════════════════════════════════════════════════════════
+// WALK UP — back view (walking away from camera)
+// Same structure as walk right: stand + step, 4-frame cycle
+// ═══════════════════════════════════════════════════════════
+
+const WALK_UP_STAND: string[][] = [
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0  dome tip (light outline)
+  [_,_,_,_,Xl,H,H,Hl,Hl,H,H,Xl,_,_,_,_],     // 1  hair top
+  [_,_,_,Xl,H,H,H,H,H,H,H,H,Xl,_,_,_],       // 2  hair volume
+  [_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_],         // 3  back of head full
+  [_,_,X,H,H,H,Hd,Hd,Hd,Hd,H,H,H,X,_,_],    // 4  back of head lower
+  [_,_,X,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,X,_,_],// 5  nape shadow
+  [_,_,X,Hd,H,H,H,H,H,H,H,H,Hd,X,_,_],       // 6  hair sides
+  [_,_,_,X,Hd,H,Hd,Hd,Hd,Hd,H,Hd,X,_,_,_],  // 7  hair lower
+  [_,_,_,X,X,Hd,Kd,K,K,Kd,Hd,X,X,_,_,_],     // 8  nape visible
+  [_,_,_,_,_,X,K,K,K,K,X,_,_,_,_,_],           // 9  neck
+  [_,_,_,_,X,S,S,S,S,S,S,X,_,_,_,_],           // 10 collar
+  [_,_,_,X,S,S,S,Sl,Sl,S,S,S,X,_,_,_],         // 11 shirt upper
+  [_,_,X,S,S,S,S,S,S,S,S,S,S,X,_,_],           // 12 shirt wide
+  [_,_,X,K,S,S,Sd,Sd,Sd,Sd,S,S,K,X,_,_],       // 13 arms at sides
+  [_,_,X,Kd,S,Sd,Sd,Sd,Sd,Sd,Sd,S,Kd,X,_,_],  // 14 arms lower
+  [_,_,_,X,S,Sd,Sd,Sd,Sd,Sd,Sd,S,X,_,_,_],    // 15 shirt bottom
+  [_,_,_,X,P,P,P,P,P,P,P,P,X,_,_,_],           // 16 waist
+  [_,_,_,X,P,P,P,X,X,P,P,P,X,_,_,_],           // 17 legs together
+  [_,_,_,X,P,P,Pd,X,X,Pd,P,P,X,_,_,_],         // 18 legs
+  [_,_,_,X,Pd,Pd,Pd,X,X,Pd,Pd,Pd,X,_,_,_],    // 19 legs dark
+  [_,_,_,X,Pd,Pd,Pd,X,X,Pd,Pd,Pd,X,_,_,_],    // 20 legs lower
+  [_,_,X,O,O,O,O,X,X,O,O,O,O,X,_,_],           // 21 shoes
+  [_,_,X,O,O,O,O,X,X,O,O,O,O,X,_,_],           // 22 shoes
+  [_,_,X,X,X,X,X,_,_,X,X,X,X,X,_,_],           // 23 soles
+];
+
+const WALK_UP_STEP_L: string[][] = [
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0
+  [_,_,_,_,Xl,H,H,Hl,Hl,H,H,Xl,_,_,_,_],     // 1
+  [_,_,_,Xl,H,H,H,H,H,H,H,H,Xl,_,_,_],       // 2
+  [_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_],         // 3
+  [_,_,X,H,H,H,Hd,Hd,Hd,Hd,H,H,H,X,_,_],    // 4
+  [_,_,X,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,X,_,_],// 5
+  [_,_,X,Hd,H,H,H,H,H,H,H,H,Hd,X,_,_],       // 6
+  [_,_,_,X,Hd,H,Hd,Hd,Hd,Hd,H,Hd,X,_,_,_],  // 7
+  [_,_,_,X,X,Hd,Kd,K,K,Kd,Hd,X,X,_,_,_],     // 8
+  [_,_,_,_,_,X,K,K,K,K,X,_,_,_,_,_],           // 9
+  [_,_,_,_,X,S,S,S,S,S,S,X,_,_,_,_],           // 10
+  [_,_,_,X,S,S,S,Sl,Sl,S,S,S,X,_,_,_],         // 11
+  [_,_,X,S,S,S,S,S,S,S,S,S,S,X,_,_],           // 12
+  [_,X,K,X,S,S,Sd,Sd,Sd,Sd,S,S,X,K,X,_],       // 13 arms swing
+  [_,X,Kd,X,S,Sd,Sd,Sd,Sd,Sd,Sd,S,X,Kd,X,_],  // 14
+  [_,_,X,X,S,Sd,Sd,Sd,Sd,Sd,Sd,S,X,X,_,_],    // 15
+  [_,_,_,X,P,P,P,P,P,P,P,P,X,_,_,_],           // 16
+  [_,_,_,X,P,P,X,_,_,X,P,P,X,_,_,_],           // 17 legs apart
+  [_,_,X,P,Pd,X,_,_,_,_,X,Pd,P,X,_,_],         // 18 stride
+  [_,_,X,Pd,Pd,X,_,_,_,_,X,Pd,Pd,X,_,_],       // 19
+  [_,_,X,Pd,Pd,X,_,_,_,_,X,Pd,Pd,X,_,_],       // 20
+  [_,X,O,O,O,X,_,_,_,_,X,O,O,O,X,_],           // 21 shoes apart
+  [_,X,O,O,O,X,_,_,_,_,_,X,O,O,X,_],           // 22
+  [_,X,X,X,X,_,_,_,_,_,_,X,X,X,_,_],           // 23
+];
+
+const WALK_UP_STEP_R: string[][] = WALK_UP_STEP_L.map(row => [...row].reverse());
+
+// ═══════════════════════════════════════════════════════════
 // HAIR TEMPLATES — 4 hair style variations
 // Each replaces rows 0-9 of the idle template
 // ═══════════════════════════════════════════════════════════
 
 const HAIR_LONG: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_],          // 0  dome tip
-  [_,_,_,_,X,Hl,H,Hl,Hl,H,Hl,X,_,_,_,_],     // 1  dome widens
-  [_,_,_,X,H,Hl,H,Hl,Hl,H,Hl,H,X,_,_,_],    // 2  hair volume
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0  dome tip (light outline)
+  [_,_,_,_,Xl,Hl,H,Hl,Hl,H,Hl,Xl,_,_,_,_],   // 1  dome widens
+  [_,_,_,Xl,H,Hl,H,Hl,Hl,H,Hl,H,Xl,_,_,_],   // 2  hair volume
   [_,_,X,H,H,H,H,H,H,H,H,H,H,X,_,_],        // 3  hair full
   [_,_,X,H,H,Hd,Hd,Hd,Hd,Hd,Hd,H,H,X,_,_], // 4  brow shadow
   [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],       // 5  face + hair sides
-  [_,_,X,Hd,K,E,Ep,K,K,Ep,E,K,Hd,X,_,_],     // 6  eyes
-  [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],       // 7  face
+  [_,_,X,Hd,Kb,E,Ep,K,K,Ep,E,Kb,Hd,X,_,_],   // 6  eyes + blush
+  [_,_,X,Hd,K,K,K,Km,Km,K,K,K,Hd,X,_,_],     // 7  face + mouth
   [_,_,X,H,Kd,K,K,K,K,K,K,Kd,H,X,_,_],       // 8  jaw + hair
   [_,_,X,H,H,Kd,K,K,K,K,Kd,H,H,X,_,_],       // 9  neck + hair drape
 ];
 
 const HAIR_SHORT: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_],          // 0
-  [_,_,_,_,X,H,H,Hl,Hl,H,H,X,_,_,_,_],       // 1  tighter
-  [_,_,_,X,H,Hl,H,Hl,Hl,H,Hl,H,X,_,_,_],    // 2
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0  light outline
+  [_,_,_,_,Xl,H,H,Hl,Hl,H,H,Xl,_,_,_,_],     // 1  tighter
+  [_,_,_,Xl,H,Hl,H,Hl,Hl,H,Hl,H,Xl,_,_,_],   // 2
   [_,_,_,X,H,H,H,H,H,H,H,H,X,_,_,_],        // 3  narrower
   [_,_,_,X,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,X,_,_,_], // 4  bangs
   [_,_,_,X,K,K,K,K,K,K,K,K,X,_,_,_],          // 5  no side hair
-  [_,_,_,X,K,E,Ep,K,K,Ep,E,K,X,_,_,_],        // 6  eyes
-  [_,_,_,X,K,K,K,K,K,K,K,K,X,_,_,_],          // 7  face
+  [_,_,_,X,Kb,E,Ep,K,K,Ep,E,Kb,X,_,_,_],      // 6  eyes + blush
+  [_,_,_,X,K,K,K,Km,Km,K,K,K,X,_,_,_],        // 7  face + mouth
   [_,_,_,X,Kd,K,K,K,K,K,K,Kd,X,_,_,_],       // 8  jaw
   [_,_,_,_,X,Kd,K,K,K,K,Kd,X,_,_,_,_],       // 9  neck
 ];
 
 const HAIR_PUFFY: string[][] = [
-  [_,_,_,_,_,X,X,X,X,X,X,_,_,_,_,_],          // 0
-  [_,_,_,X,Hl,Hl,Hl,H,H,Hl,Hl,Hl,X,_,_,_],  // 1  immediate poof
-  [_,_,X,H,Hl,H,Hl,H,H,Hl,H,Hl,H,X,_,_],    // 2  fluffy volume
+  [_,_,_,_,_,Xl,Xl,Xl,Xl,Xl,Xl,_,_,_,_,_],    // 0  light outline
+  [_,_,_,Xl,Hl,Hl,Hl,H,H,Hl,Hl,Hl,Xl,_,_,_], // 1  immediate poof
+  [_,_,Xl,H,Hl,H,Hl,H,H,Hl,H,Hl,H,Xl,_,_],   // 2  fluffy volume
   [_,_,X,H,H,Hl,H,H,H,H,Hl,H,H,X,_,_],      // 3  hair body
   [_,_,X,H,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,H,X,_,_], // 4  bangs
   [_,_,X,H,Hd,K,K,K,K,K,K,Hd,H,X,_,_],       // 5  forehead + thick hair
-  [_,_,X,H,K,E,Ep,K,K,Ep,E,K,H,X,_,_],        // 6  eyes
-  [_,_,X,H,K,K,K,K,K,K,K,K,H,X,_,_],          // 7  face
+  [_,_,X,H,Kb,E,Ep,K,K,Ep,E,Kb,H,X,_,_],      // 6  eyes + blush
+  [_,_,X,H,K,K,K,Km,Km,K,K,K,H,X,_,_],        // 7  face + mouth
   [_,_,_,X,K,K,K,Kd,Kd,K,K,K,X,_,_,_],        // 8  lower face
   [_,_,_,X,Kd,K,K,K,K,K,K,Kd,X,_,_,_],        // 9  jaw
 ];
 
 const HAIR_SPIKY: string[][] = [
-  [_,_,_,_,X,X,H,Hl,Hl,H,X,X,_,_,_,_],        // 0  spikes up
-  [_,_,_,X,H,Hl,Hl,H,H,Hl,Hl,H,X,_,_,_],     // 1  tall spikes
-  [_,_,X,Hl,H,Hl,H,Hl,Hl,H,Hl,H,Hl,X,_,_],  // 2  wide spiky
+  [_,_,_,_,Xl,Xl,H,Hl,Hl,H,Xl,Xl,_,_,_,_],    // 0  spikes up (light outline)
+  [_,_,_,Xl,H,Hl,Hl,H,H,Hl,Hl,H,Xl,_,_,_],   // 1  tall spikes
+  [_,_,Xl,Hl,H,Hl,H,Hl,Hl,H,Hl,H,Hl,Xl,_,_], // 2  wide spiky
   [_,_,X,H,Hl,H,H,H,H,H,H,Hl,H,X,_,_],       // 3  hair body
   [_,_,X,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,Hd,X,_,_], // 4  brow line
   [_,_,X,Hd,K,K,K,K,K,K,K,K,Hd,X,_,_],        // 5  face
-  [_,_,X,Hd,K,E,Ep,K,K,Ep,E,K,Hd,X,_,_],      // 6  eyes
-  [_,_,_,X,K,K,K,K,K,K,K,K,X,_,_,_],           // 7  face
+  [_,_,X,Hd,Kb,E,Ep,K,K,Ep,E,Kb,Hd,X,_,_],    // 6  eyes + blush
+  [_,_,_,X,K,K,K,Km,Km,K,K,K,X,_,_,_],         // 7  face + mouth
   [_,_,_,X,Kd,K,K,K,K,K,K,Kd,X,_,_,_],        // 8  jaw
   [_,_,_,_,X,Kd,K,K,K,K,Kd,X,_,_,_,_],        // 9  neck
 ];
+
+// ═══════════════════════════════════════════════════════════
+// BLINK — closed-eye row variant for idle blink animation
+// Replaces row 6 (eye row) with closed eyelids
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Clones a template and swaps row 6 with a closed-eye version:
+ * E/Ep pixels become K (skin), with Kd line underneath for eyelid.
+ */
+function applyBlinkRow(template: string[][]): string[][] {
+  const result = template.map((row) => [...row]);
+  // Row 6 is the eye row in all templates
+  if (result.length > 6) {
+    result[6] = result[6].map((cell) => {
+      if (cell === E || cell === Ep) return Kd; // closed eyelid line
+      return cell;
+    });
+  }
+  return result;
+}
 
 export const HAIR_TEMPLATES: Record<HairStyle, string[][]> = {
   long: HAIR_LONG,
@@ -586,8 +685,10 @@ function applyHairStyle(idle: string[][], hairStyle: HairStyle): string[][] {
 
 export interface CharacterSprites {
   idle: SpriteData;
+  idleBlink: SpriteData;
   idleBreath: [SpriteData, SpriteData];
   walkDown: [SpriteData, SpriteData, SpriteData, SpriteData];
+  walkUp: [SpriteData, SpriteData, SpriteData, SpriteData];
   walkRight: [SpriteData, SpriteData, SpriteData, SpriteData];
   walkLeft: [SpriteData, SpriteData, SpriteData, SpriteData];
   typing: [SpriteData, SpriteData];
@@ -700,10 +801,14 @@ export function getCharacterSprites(
   const [sit1, sit2] = SITTING_TEMPLATES[paletteId] || SITTING_TEMPLATES.nyx;
   const r = (t: string[][]) => resolve(t, pal);
 
+  const blinkTemplate = applyBlinkRow(template);
+
   const sprites: CharacterSprites = {
     idle: r(template),
+    idleBlink: r(blinkTemplate),
     idleBreath: [r(template), r(breathTemplate)],
     walkDown: [r(WALK_DOWN_L), r(template), r(WALK_DOWN_R), r(template)],
+    walkUp: [r(WALK_UP_STEP_L), r(WALK_UP_STAND), r(WALK_UP_STEP_R), r(WALK_UP_STAND)],
     walkRight: [r(WALK_RIGHT_STEP), r(WALK_RIGHT_STAND), r(WALK_RIGHT_STEP), r(WALK_RIGHT_STAND)],
     walkLeft: [
       resolve(flipH(WALK_RIGHT_STEP), pal),
@@ -741,4 +846,49 @@ export function renderSprite(
       ctx.fillRect(x + col * scale, y + row * scale, scale, scale);
     }
   }
+}
+
+// ── PIXI TEXTURE GENERATION ────────────────────────────
+
+const textureCache = new Map<string, Texture>();
+
+export function getSpriteTexture(
+  sprite: SpriteData,
+  cacheKey: string,
+  scale: number = 4
+): Texture {
+  const cached = textureCache.get(cacheKey);
+  if (cached) return cached;
+
+  const w = (sprite[0]?.length ?? 16) * scale;
+  const h = sprite.length * scale;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+
+  for (let row = 0; row < sprite.length; row++) {
+    for (let col = 0; col < sprite[row].length; col++) {
+      const color = sprite[row][col];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(col * scale, row * scale, scale, scale);
+    }
+  }
+
+  const texture = Texture.from({ resource: canvas, scaleMode: "nearest" });
+  textureCache.set(cacheKey, texture);
+  return texture;
+}
+
+export function invalidateTextureCache(prefix: string): void {
+  for (const key of textureCache.keys()) {
+    if (key.startsWith(prefix)) {
+      textureCache.delete(key);
+    }
+  }
+}
+
+export function clearAllSpriteTextures(): void {
+  textureCache.clear();
 }

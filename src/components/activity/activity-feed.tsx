@@ -1,19 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { activityFeed, agents } from "@/lib/mock-data";
+import { useGateway } from "@/components/gateway-provider";
 import ActivityItem from "./activity-item";
 
 export default function ActivityFeed() {
+  const { agents, activity, isConnected } = useGateway();
   const [filter, setFilter] = useState<string>("all");
 
   const filtered =
     filter === "all"
-      ? activityFeed
-      : activityFeed.filter((e) => e.agentId === filter);
+      ? activity
+      : activity.filter((e) => e.agentId === filter);
 
   return (
     <div>
+      {/* Connection indicator */}
+      {isConnected && (
+        <div className="mb-3 flex items-center gap-2 text-xs text-[#22c55e]/70">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+          </span>
+          Live — streaming from gateway
+        </div>
+      )}
+
       {/* Filter tabs */}
       <div className="mb-4 flex gap-2">
         <button

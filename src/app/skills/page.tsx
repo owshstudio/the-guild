@@ -1,6 +1,10 @@
-import { agents } from "@/lib/mock-data";
+"use client";
+
+import { useGateway } from "@/components/gateway-provider";
 
 export default function SkillsPage() {
+  const { agents } = useGateway();
+
   return (
     <div className="min-h-screen p-6">
       <div className="mb-8">

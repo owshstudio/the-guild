@@ -1,6 +1,6 @@
 "use client";
 
-import { tasks, agents } from "@/lib/mock-data";
+import { useGateway } from "@/components/gateway-provider";
 import { TaskStatus } from "@/lib/types";
 import TaskCard from "./task-card";
 
@@ -14,6 +14,8 @@ const statusOrder: TaskStatus[] = [
 ];
 
 export default function KanbanBoard() {
+  const { agents, tasks } = useGateway();
+
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">
       {agents.map((agent) => {

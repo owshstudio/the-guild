@@ -1,11 +1,23 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { agents as agentData } from "@/lib/mock-data";
 import { Agent } from "@/lib/types";
-import { OFFICE, drawEnvironment } from "./office-map";
+import { useGateway } from "@/components/gateway-provider";
+import {
+  OFFICE,
+  drawEnvironment,
+  drawAmbientLighting,
+  updateParticles,
+  drawParticles,
+  updateServerLEDs,
+  drawServerLEDs,
+  updateDustMotes,
+  drawDustMotes,
+  RoomId,
+} from "./office-map";
 import {
   AgentEntity,
+  AgentState,
   createAgentEntities,
   updateAgent,
   drawAgent,
@@ -16,40 +28,97 @@ interface PixelOfficeCanvasProps {
   onAgentClick: (agent: Agent | null) => void;
 }
 
+// Map agent status to pixel office character state
+function statusToState(status: string, currentState: AgentState): AgentState {
+  switch (status) {
+    case "active":
+      return "typing";
+    case "stopped":
+      return "idle"; // stopped agents just stand still
+    case "idle":
+    default:
+      return "idle";
+  }
+}
+
 export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const agentsRef = useRef<AgentEntity[]>(createAgentEntities());
   const hoveredRef = useRef<string | null>(null);
+  const lastTimeRef = useRef<number>(0);
   const [, forceRender] = useState(0);
 
-  const draw = useCallback((ctx: CanvasRenderingContext2D) => {
+  const { agents: liveAgents } = useGateway();
+  const currentRoom: RoomId = "main-office";
+
+  // Sync live agent status → pixel office character state
+  useEffect(() => {
+    const entities = agentsRef.current;
+    for (const liveAgent of liveAgents) {
+      const entity = entities.find((e) => e.id === liveAgent.id);
+      if (entity) {
+        const newState = statusToState(liveAgent.status, entity.state);
+        if (entity.state !== newState) {
+          entity.state = newState;
+          entity.frame = 0;
+          entity.frameTimer = 0;
+        }
+        entity.status = liveAgent.status;
+      }
+    }
+  }, [liveAgents]);
+
+  const draw = useCallback((ctx: CanvasRenderingContext2D, timestamp: number) => {
     const { width, height } = OFFICE;
+
+    // Calculate delta time in seconds
+    const deltaTime = lastTimeRef.current === 0
+      ? 0.016
+      : Math.min((timestamp - lastTimeRef.current) / 1000, 0.1);
+    lastTimeRef.current = timestamp;
+
     ctx.clearRect(0, 0, width, height);
 
-    // Floor + walls
-    drawEnvironment(ctx);
+    // ── Pass 1: Floor + walls + furniture shadows ──
+    drawEnvironment(ctx, currentRoom);
 
-    // Agents
+    // ── Pass 2: Particles (under agents) ──
+    updateParticles(deltaTime);
+    drawParticles(ctx);
+
+    // Dust motes
+    updateDustMotes(deltaTime);
+    drawDustMotes(ctx);
+
+    // ── Pass 3: Agents ──
     const agentEntities = agentsRef.current;
     agentEntities.forEach((agent) => {
-      updateAgent(agent);
+      updateAgent(agent, deltaTime);
       drawAgent(ctx, agent, OFFICE.scale);
     });
 
-    // Hover highlight
+    // ── Pass 4: Server LEDs (over furniture) ──
+    updateServerLEDs(deltaTime);
+    drawServerLEDs(ctx, currentRoom);
+
+    // ── Pass 5: Ambient lighting overlay ──
+    drawAmbientLighting(ctx, currentRoom);
+
+    // ── Pass 6: Hover highlight (UI overlay) ──
     if (hoveredRef.current) {
       const agent = agentEntities.find((a) => a.id === hoveredRef.current);
       if (agent) {
         const w = 16 * OFFICE.scale;
         const h = 24 * OFFICE.scale;
+        const xOff = (OFFICE.tileSize - 16 * OFFICE.scale) / 2;
         ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
-        ctx.strokeRect(agent.x - 4, agent.y - 4, w + 8, h + 8);
+        ctx.strokeRect(agent.x + xOff - 4, agent.y - 4, w + 8, h + 8);
         ctx.setLineDash([]);
       }
     }
-  }, []);
+  }, [currentRoom]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -60,8 +129,8 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
     ctx.imageSmoothingEnabled = false;
 
     let animationId: number;
-    const animate = () => {
-      draw(ctx);
+    const animate = (timestamp: number) => {
+      draw(ctx, timestamp);
       animationId = requestAnimationFrame(animate);
     };
     animationId = requestAnimationFrame(animate);
@@ -83,16 +152,17 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const coords = getCanvasCoords(e);
       if (!coords) return;
-      for (const agent of agentsRef.current) {
-        if (isAgentHovered(agent, coords.x, coords.y, OFFICE.scale)) {
-          const data = agentData.find((a) => a.id === agent.id) || null;
+      for (const entity of agentsRef.current) {
+        if (isAgentHovered(entity, coords.x, coords.y, OFFICE.scale)) {
+          // Find matching live agent data for the panel
+          const data = liveAgents.find((a) => a.id === entity.id) || null;
           onAgentClick(data);
           return;
         }
       }
       onAgentClick(null);
     },
-    [onAgentClick, getCanvasCoords]
+    [onAgentClick, getCanvasCoords, liveAgents]
   );
 
   const handleMouseMove = useCallback(
@@ -137,7 +207,7 @@ export default function PixelOfficeCanvas({ onAgentClick }: PixelOfficeCanvasPro
         className="w-full h-full object-cover"
         style={{
           imageRendering: "pixelated",
-          background: "#d4c9a8",
+          background: "#c8b88a",
         }}
       />
     </div>
